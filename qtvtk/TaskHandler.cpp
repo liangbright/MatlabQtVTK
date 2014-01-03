@@ -47,11 +47,11 @@ void TaskHandler::CreateMatlabCommandTranslator()
 }
 
 
-bool TaskHandler::run_vtkplotpoint(QString Path, QString TaskFileName)
+bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 {
 	qDebug() << "run_vtkplotpoint";
 
-	QFile TaskFile(Path+TaskFileName + ".json");
+	QFile TaskFile(Task.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -158,7 +158,9 @@ bool TaskHandler::run_vtkplotpoint(QString Path, QString TaskFileName)
 	QString DataFileFullNameAndPath;
 	it = TaskObject.find("PointDataFileName");
 	if (it != TaskObject.end())
-	{ DataFileFullNameAndPath = Path + it.value().toString() + ".data";}
+	{ 
+		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString() + ".data";
+	}
 	else
 	{
 		qWarning("PointDataFileName is unknown");
@@ -182,7 +184,7 @@ bool TaskHandler::run_vtkplotpoint(QString Path, QString TaskFileName)
 	auto PropHandle = Figure->PlotPoint(Point);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Path + "~temp.json";
+	QString tempName = Task.Path + Task.FolderName + "/~temp.json";
 
 	QFile ResultFile(tempName);
 
@@ -210,9 +212,9 @@ bool TaskHandler::run_vtkplotpoint(QString Path, QString TaskFileName)
 }
 
 
-bool TaskHandler::run_vtkshowimage(QString Path, QString TaskFileName)
+bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 {
-	QFile TaskFile(Path + TaskFileName + ".json");
+	QFile TaskFile(Task.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -338,7 +340,9 @@ bool TaskHandler::run_vtkshowimage(QString Path, QString TaskFileName)
 	QString DataFileFullNameAndPath;
 	it = TaskObject.find("ImageDataFileName");
 	if (it != TaskObject.end())
-	{ DataFileFullNameAndPath = Path + it.value().toString() + ".data";}
+	{
+		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString() + ".data";
+	}
 	else
 	{
 		qWarning("ImageDataFileName is unknown");
@@ -367,7 +371,7 @@ bool TaskHandler::run_vtkshowimage(QString Path, QString TaskFileName)
 	auto PropHandle = Figure->ShowImage(ImageData);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Path + "~temp.json";
+	QString tempName = Task.Path + Task.FolderName + "/~temp.json";
 	QFile ResultFile(tempName);
 
 	if (!ResultFile.open(QIODevice::WriteOnly))
@@ -395,13 +399,13 @@ bool TaskHandler::run_vtkshowimage(QString Path, QString TaskFileName)
 }
 
 
-bool TaskHandler::run_vtkshowmesh(QString Path, QString TaskFileName)
+bool TaskHandler::run_vtkshowmesh(TaskInformation Task)
 {
 	return true;
 }
 
 
-bool TaskHandler::run_vtkdeleteprop(QString Path, QString TaskFileName)
+bool TaskHandler::run_vtkdeleteprop(TaskInformation Task)
 {
 
 	//-----------------------------Done---------------------------------------------------//
@@ -409,11 +413,9 @@ bool TaskHandler::run_vtkdeleteprop(QString Path, QString TaskFileName)
 }
 
 
-bool TaskHandler::RunTask(QString Path, QString TaskFileName)
+bool TaskHandler::RunTask(TaskInformation Task)
 {	
-	// read ramdisk M:/TaskHandle/Task.json and *.data
-
-	QFile TaskFile(Path + TaskFileName + ".json");
+	QFile TaskFile(Task.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly)) 
 	{
@@ -446,7 +448,7 @@ bool TaskHandler::RunTask(QString Path, QString TaskFileName)
 	if (it2 != m_MatlabCommandTranslator.end())
 	{
 		auto function = it2.value();
-		return function(this, Path, TaskFileName);
+		return function(this, Task);
 	}
 	else
 	{
@@ -455,9 +457,9 @@ bool TaskHandler::RunTask(QString Path, QString TaskFileName)
 
 }
 
-void TaskHandler::WriteExampleTaskFile(QString Path, QString FileName)
+void TaskHandler::WriteExampleTaskFile(TaskInformation Task)
 {
-	QFile TaskFile(Path + FileName + ".json");
+	QFile TaskFile(Task.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::WriteOnly))
 	{
@@ -483,9 +485,9 @@ void TaskHandler::WriteExampleTaskFile(QString Path, QString FileName)
 }
 
 
-void TaskHandler::ReadExampleTaskFile(QString Path, QString FileName)
+void TaskHandler::ReadExampleTaskFile(TaskInformation Task)
 {
-	QFile TaskFile(Path + FileName + ".json");
+	QFile TaskFile(Task.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -724,6 +726,7 @@ VtkDataTypeEnum TaskHandler::MapMatlabDataTypeToVtkDataType(QString MatlabDataTy
 	{
 		return VtkDataTypeEnum::VALUE_UNKNOWN;
 	}
+
 }
 
 
@@ -744,34 +747,4 @@ quint64 TaskHandler::GenerateFigureHandle()
 	}
 
 	return (quint64)EndTime;
-}
-
-
-bool TaskHandler::RemoveFolder(const QString& FolderName)
-{
-	bool result = true;
-	QDir dir(FolderName);
-
-	if (dir.exists(FolderName))
-	{
-		Q_FOREACH(QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
-		{
-			if (info.isDir())
-			{
-				result = this->RemoveFolder(info.absoluteFilePath());
-			}
-			else
-			{
-				result = QFile::remove(info.absoluteFilePath());
-			}
-
-			if (!result)
-			{
-				return result;
-			}
-		}
-		result = dir.rmdir(FolderName);
-	}
-
-	return result;
 }

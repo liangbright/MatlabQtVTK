@@ -14,9 +14,41 @@
 
 #include "QVtkFigure.h"
 
-// forward declaration  -------------
-class vtkDataObject;
-// end of forward declaration ---------
+
+class TaskInformation
+{
+public:
+	// M:/PendingTasks/1234567890/Task.json
+	QString Path;         // M:/PendingTasks/
+	QString FolderName;   // 1234567890  is the handle of the task
+private:
+	QString FileName;     // Task.json 
+
+public:
+	TaskInformation()
+	{
+		FileName = "Task";
+	}
+
+	~TaskInformation()
+	{
+	}
+
+	QString GetFileName()
+	{
+		return  FileName;
+	}
+
+	QString GetFullFileNameAndPath()
+	{
+		return Path + FolderName + "/" + FileName + ".json";
+	}
+
+	QString GetFullPath()
+	{
+		return Path + FolderName + "/";
+	}
+};
 
 class MatlabDataTypeList
 {
@@ -68,7 +100,7 @@ private:
 
 	MatlabDataTypeList m_MatlabDataTypeList;
 
-	QMap<QString, std::function<bool(TaskHandler*, QString, QString)>> m_MatlabCommandTranslator;
+	QMap<QString, std::function<bool(TaskHandler*, TaskInformation)>> m_MatlabCommandTranslator;
 
 	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord;
 
@@ -80,12 +112,10 @@ public:
 
 	void CreateMatlabCommandTranslator();
 
-	bool RunTask(QString, QString);
+	bool RunTask(TaskInformation);
 
-	void WriteExampleTaskFile(QString, QString);
-	void ReadExampleTaskFile(QString, QString);
-
-	bool RemoveFolder(const QString&);
+	void WriteExampleTaskFile(TaskInformation);
+	void ReadExampleTaskFile(TaskInformation);
 
 private:	
 	//----------------------- read data file -------------------//
@@ -97,13 +127,13 @@ private:
 	//----------------------------------------------------------//
 
 	//----------------------- process matlab command -------------------//
-	bool run_vtkplotpoint(QString, QString);
+	bool run_vtkplotpoint(TaskInformation);
 
-	bool run_vtkshowimage(QString, QString);
+	bool run_vtkshowimage(TaskInformation);
 
-	bool run_vtkshowmesh(QString, QString);
+	bool run_vtkshowmesh(TaskInformation);
 	//---------------------------------------
-	bool run_vtkdeleteprop(QString, QString);
+	bool run_vtkdeleteprop(TaskInformation);
 
 	//----------------------------------------------------------//
 	

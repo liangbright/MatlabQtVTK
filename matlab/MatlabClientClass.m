@@ -1,9 +1,7 @@
 classdef MatlabClientClass < handle
     
 properties
-    
-    TaskTemplate
-        
+      
     port = 12345;
     host = 'localhost';       
     
@@ -57,20 +55,20 @@ function IsSucess = WriteTask(this, Taskhandle, Task)
 
 % Taskhandle is string
 
-% write JsonObject to "M:/PendingTask/Taskhandle/Task.json"
-% write Data to "M:/PendingTask/Taskhandle/DataFileFullName"
+% write JsonObject to "M:/PendingTasks/Taskhandle/Task.json"
+% write Data to "M:/PendingTasks/Taskhandle/DataFileFullName"
 
 
 end
 
 function Status=CheckTaskStatus(this, Taskhandle)
-% check if there is M:/CompletedTask/Taskhandle
+% check if there is M:/CompletedTasks/Taskhandle
 % wait within 60 seconds
 
 end
 
 function Result=ReadResult(this, Taskhandle)
-% read M:/CompletedTask/Taskhandle/Result.json                        
+% read M:/CompletedTasks/Taskhandle/Result.json                        
 
 % Result.IsSucess
 % Result.FigureHandle

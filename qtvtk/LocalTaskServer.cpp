@@ -2,6 +2,8 @@
 #include <qapplication.h>
 #include <qmessagebox.h>
 #include <QFile>
+#include <QDir>
+#include <QDirIterator>
 
 #include <memory>
 
@@ -13,11 +15,43 @@ LocalTaskServer::LocalTaskServer()
 
 	m_TcpServer.reset(new QTcpServer());
 
-	m_TaskHandler->WriteExampleTaskFile("M:/CurrentTask/", "exampletask");
-
-	m_TaskHandler->ReadExampleTaskFile("M:/CurrentTask/", "exampletask");
+	this->InitializeTaskFolders();
 }
 
+void LocalTaskServer::test()
+{
+	qDebug() << "test example task read and write";
+
+	TaskInformation Task;
+	Task.Path = "M:/ExampleTasks/";
+	Task.FolderName = "Example1";
+	QDir dir("M:/ExampleTasks");
+	dir.mkdir(Task.FolderName);
+
+	m_TaskHandler->WriteExampleTaskFile(Task);
+
+	m_TaskHandler->ReadExampleTaskFile(Task);
+
+	qDebug() << "example task test finished";
+
+	qDebug() << "test QVtkFigure";
+
+	auto Figure = new QVtkFigure;
+
+	Figure->Show();
+
+	auto points = vtkPoints::New();
+
+	for (int i = 0; i < 10; ++i)
+	{
+		points->InsertPoint(i, double(100 + i), double(100 + i), double(100 + i));
+	}
+
+	auto Prop = Figure->PlotPoint(points);
+
+	std::cout << "vtkProp Handle: " << Prop << std::endl;
+
+}
 
 LocalTaskServer::~LocalTaskServer()
 {
@@ -56,43 +90,145 @@ void LocalTaskServer::Shutdown()
 
 void LocalTaskServer::HandleNewConnection()
 {	
-	auto socket = m_TcpServer->nextPendingConnection();
-
-	qDebug("new connection: processing new task");	
-
-	QString Prefix = "M:/PendingTask/";
-
-	QString TaskHandle;
-	//get the TaskHandle : e.g., M:/PendingTask/abcd12334345
-	// the name abcd12334345 is the handle of the task 
-
-	QString TaskFolderName = Prefix + TaskHandle;
-
-	QString Path = TaskFolderName + '/';
-
-	QString TaskFileName = "Task";
-
-	auto IsSucess = m_TaskHandler->RunTask(Path, TaskFileName);
-	if (IsSucess == false)
+	while (m_TcpServer->hasPendingConnections())
 	{
-		qDebug("Can not run the task");
+		auto socket = m_TcpServer->nextPendingConnection();
 
-		//copy *.json to  M:/FailedTask/TaskHandle";
-		
-		m_TaskHandler->RemoveFolder(TaskFolderName);
+		qDebug("new connection: processing new task");
+
+		auto TaskList = this->GetAllPendingTasks();
+		for (int i = 0; i < TaskList.size(); ++i)
+		{			
+			auto Task = TaskList.at(i);
+
+			auto IsSucess = m_TaskHandler->RunTask(Task);
+			if (IsSucess == false)
+			{
+				qDebug("Can not run the task");
+				this->HandleFailedTask(Task);
+			}
+			else
+			{
+				qDebug("The task is sucessfully completed");
+				this->HandleCompletedTask(Task);
+			}
+		}
+		// close the connection
+		socket->close();
+		socket->deleteLater();
 	}
-	else
+}
+
+bool LocalTaskServer::HasPendingTasks()
+{// check M:/PendingTasks if it is empty
+	if (QDir("M:/PendingTasks").entryList(QDir::NoDotAndDotDot | QDir::AllEntries).count() == 0)
 	{
-		qDebug("The task is sucessfully completed");
-
-		//copy *.json to  M:/CompletedTask/TaskHandle";
-
-		m_TaskHandler->RemoveFolder(TaskFolderName);
+		return false;
 	}
 
-	// close the connection
-	socket->close();
+	return true;
 }
 
 
+std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
+{
+	std::vector<TaskInformation> TaskList;
 
+	TaskInformation Task;
+	Task.Path = "M:/PendingTasks";
+
+	QDir dir("M:/PendingTasks");
+	dir.setFilter(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot);
+
+	auto list = dir.entryList();
+	for (int i = 0; i < list.size(); ++i)
+	{
+		Task.FolderName = list.at(i);
+
+		TaskList.push_back(Task);
+	}
+
+	return TaskList;
+}
+
+bool LocalTaskServer::HandleFailedTask(TaskInformation Task)
+{
+	// move *.json to "M:/FailedTasks"
+	// delete Task folder
+
+	QString TaskFolder = Task.Path + Task.FolderName;
+
+	QDir dir(TaskFolder);
+	dir.setFilter(QDir::Files);
+	QStringList name;
+	name << "*.json";
+	dir.setNameFilters(name);
+	auto list = dir.entryList();
+
+	bool result = true;
+	for (int i = 0; i < list.size(); ++i)
+	{
+		auto sourceFileName = list.at(i);
+		auto sourceFile = TaskFolder + "/" + sourceFileName;
+		auto destinationFile = "M:/FailedTasks/" + sourceFileName;
+		auto tempresult = QFile::copy(sourceFile, destinationFile);
+
+		if (tempresult == false)
+		{
+			result = false;
+		}
+	}
+
+	dir.removeRecursively();
+
+	return result;
+
+}
+
+bool LocalTaskServer::HandleCompletedTask(TaskInformation Task)
+{
+	// move *.json to "M:/CompletedTasks"
+	// delete Task folder
+
+	QString TaskFolder = Task.Path + Task.FolderName;
+
+	QDir dir(TaskFolder);
+	dir.setFilter(QDir::Files);
+	QStringList name;
+	name << "*.json";
+	dir.setNameFilters(name);
+	auto list = dir.entryList();
+
+	bool result = true;
+	for (int i = 0; i < list.size(); ++i)
+	{
+		auto sourceFileName = list.at(i);
+		auto sourceFile = TaskFolder + "/" + sourceFileName;
+		auto destinationFile = "M:/CompletedTasks/" + sourceFileName;
+		auto tempresult = QFile::copy(sourceFile, destinationFile);
+
+		if (tempresult == false)
+		{
+			result = false;
+		}
+	}
+
+	dir.removeRecursively();
+
+	return result;
+}
+
+bool LocalTaskServer::InitializeTaskFolders()
+{
+	QDir dir("M:");
+	
+	dir.mkdir("PendingTasks");
+
+	dir.mkdir("CompletedTasks");
+
+	dir.mkdir("FailedTasks");
+
+	dir.mkdir("ExampleTasks");
+
+	return true;
+}

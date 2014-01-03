@@ -2,6 +2,7 @@
 #define LocalTaskServer_h
 
 #include <qobject.h>
+#include <qstring.h>
 #include <qtcpServer.h>
 #include <qhostaddress.h>
 
@@ -24,6 +25,8 @@ public:
 	LocalTaskServer();
 	~LocalTaskServer();
 	
+	void test();
+
 	bool Startup();
 
 	void Shutdown();
@@ -34,7 +37,15 @@ public slots:
 	void HandleNewConnection();
 
 private:
-	bool LocalTaskServer::RemoveFolder(const QString&);
+	bool InitializeTaskFolders();
+
+	bool HasPendingTasks();
+
+	std::vector<TaskInformation> GetAllPendingTasks();
+
+	bool HandleFailedTask(TaskInformation);
+
+	bool HandleCompletedTask(TaskInformation);
 };
 
 #endif
