@@ -27,7 +27,7 @@ private:
 public:
 	TaskInformation()
 	{
-		FileName = "Task";
+		FileName = "Task.json";
 	}
 
 	~TaskInformation()
@@ -41,7 +41,7 @@ public:
 
 	QString GetFullFileNameAndPath()
 	{
-		return Path + FolderName + "/" + FileName + ".json";
+		return Path + FolderName + "/" + FileName;
 	}
 
 	QString GetFullPath()
@@ -127,6 +127,8 @@ private:
 	//----------------------------------------------------------//
 
 	//----------------------- process matlab command -------------------//
+	bool run_vtkfigure(TaskInformation);
+
 	bool run_vtkplotpoint(TaskInformation);
 
 	bool run_vtkshowimage(TaskInformation);

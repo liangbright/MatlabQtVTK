@@ -122,22 +122,19 @@ fclose('all');
 IsSucess=1;
 end
 
-function Status=WaitForResult(this, Taskhandle)
+function Status=CheckTaskStatus(this, Taskhandle)
 % check if there is M:/CompletedTasks/Taskhandle
 % wait within 60 seconds
 
 Status=0;
 
 t1=clock;
-
+listing = dir(['M:/CompletedTasks/' Taskhandle] );
 while 1
-    
-    listing = dir(['M:/CompletedTasks/' Taskhandle] );
     if ~isempty(listing)
         Status=1;
         return
     end
-    
     t2=clock;    
     year=t2(1)-t1(1);
     month=t2(2)-t1(2);
@@ -146,12 +143,7 @@ while 1
     min=t2(5)-t1(5);
     sec=t2(6)-t1(6);
     
-    interval=sec+min*60+hour*60*60+day*60*60*60+month*60*60*60*60+year*60*60*60*60*60;
-    
-    if interval > 60
-        break
-    end
-    
+    sec+min*60+hour*60*60+day*60*60*60+month**60*60*60*60+
 end
 
 end

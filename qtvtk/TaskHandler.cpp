@@ -28,6 +28,10 @@ void TaskHandler::CreateMatlabCommandTranslator()
 {
 	QString Commmand;
 
+	Commmand = "vtkfigure";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkfigure);
+
 	Commmand = "vtkplotpoint";
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplotpoint);
@@ -46,6 +50,74 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	
 }
 
+bool TaskHandler::run_vtkfigure(TaskInformation Task)
+{
+	qDebug() << "run_vtkfigure";
+
+	QFile TaskFile(Task.GetFullFileNameAndPath());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some info ----------------------------------------//
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	// new figure --------------------------------------------------------------//
+
+	auto Figure = std::unique_ptr<QVtkFigure>(new QVtkFigure);
+
+	Figure->Show();
+
+	auto FigureHandle = this->GenerateFigureHandle();
+
+	m_FigureRecord[FigureHandle] = std::move(Figure);
+	//---------------------- Write Result ----------------------------------------//
+
+	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
+
+	QFile ResultFile(tempName);
+
+	if (!ResultFile.open(QIODevice::WriteOnly))
+	{
+		qWarning("Couldn't open file to save result");
+		return false;
+	}
+
+	QJsonObject ResultObject;
+
+	ResultObject["IsSuccess"] = QString("yes");
+
+	ResultObject["FigureHandle"] = QString::number(FigureHandle);
+
+	ResultObject["PropHandle"] = QString::number(0);
+
+	QJsonDocument ResultDoc(ResultObject);
+
+	ResultFile.write(ResultDoc.toJson());
+	ResultFile.close();
+
+	ResultFile.rename(Task.Path + Task.FolderName + "/" + ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+	return true;
+}
+
 
 bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 {
@@ -58,7 +130,7 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 		qWarning("Couldn't open task file.");
 		return false;
 	}
-	//----------------------------------------------------------//
+
 	QByteArray TaskContent = TaskFile.readAll();
 	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
 	QJsonObject TaskObject = TaskDoc.object();
@@ -111,12 +183,12 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 
 	// get MatlabDataType
 	QString DataType;
-	it = TaskObject.find("DataType");
+	it = TaskObject.find("PointDataType");
 	if (it != TaskObject.end())
 	{ DataType = it.value().toString();}
 	else
 	{
-		qWarning("DataType is unknown");
+		qWarning("PointDataType is unknown");
 		return false;
 	}
 	
@@ -159,7 +231,7 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	it = TaskObject.find("PointDataFileName");
 	if (it != TaskObject.end())
 	{ 
-		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString() + ".data";
+		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString();
 	}
 	else
 	{
@@ -167,10 +239,12 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 		return false;
 	}
 
-	QString ResultFileFullName;
+	QString ResultFileName;
 	it = TaskObject.find("ResultFileName");
 	if (it != TaskObject.end())
-	{ ResultFileFullName = it.value().toString() + ".json";}
+	{
+		ResultFileName = it.value().toString();
+	}
 	else
 	{
 		qWarning("ResultFileName is unknown");
@@ -180,11 +254,17 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	//--------------------- Get the data ---------------------------------------//
 	auto Point = ReadPointData(DataFileFullNameAndPath, PointNum, DataType);
 
+	if (Point == nullptr)
+	{
+		qWarning("Point Data is not loaded");
+		return false;
+	}
+
 	//---------------------- Plot Point ----------------------------------------//
 	auto PropHandle = Figure->PlotPoint(Point);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Task.Path + Task.FolderName + "/~temp.json";
+	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
 
 	QFile ResultFile(tempName);
 
@@ -205,8 +285,9 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	QJsonDocument ResultDoc(ResultObject);
 
 	ResultFile.write(ResultDoc.toJson());
+	ResultFile.close();
 
-	ResultFile.rename(ResultFileFullName);
+	ResultFile.rename(Task.Path + Task.FolderName + "/" + ResultFileName);
 	//-----------------------------Done---------------------------------------------------//
 	return true;
 }
@@ -420,6 +501,9 @@ bool TaskHandler::RunTask(TaskInformation Task)
 	if (!TaskFile.open(QIODevice::ReadOnly)) 
 	{
 		qWarning("Couldn't open task file (*.json)");
+		qWarning() << "Path" << Task.Path;
+		qWarning() << "FolderName" << Task.FolderName;
+		qWarning() << "FileName" << Task.GetFileName();
 
 		return false;
 	}
@@ -467,17 +551,17 @@ void TaskHandler::WriteExampleTaskFile(TaskInformation Task)
 		return;
 	}
 
-	QString Command = "vtkplotpoint";
-	quint64 FigureHandle = 12345678901;
-	quint64 PropHandle = 12345678902;
-
 	QJsonObject TaskObject;
 
-	TaskObject["Command"] = Command;
+	TaskObject["Command"] = QString("vtkplotpoint");
 
-	TaskObject["FigureHandle"] = QString::number(FigureHandle);
+	TaskObject["PointNum"] = QString("10");
 
-	TaskObject["PropHandle"] = QString::number(PropHandle);
+	TaskObject["PointDataType"] = QString("vtkplotpoint");
+
+	TaskObject["FigureHandle"] = QString::number(12345678901);
+
+	TaskObject["PropHandle"] = QString::number(12345678902);
 
 	QJsonDocument TaskDoc(TaskObject);
 
@@ -535,7 +619,7 @@ vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 P
 
 	if (!DataFile.open(QIODevice::ReadOnly))
 	{
-		qWarning("Couldn't open data file.");
+		qWarning() << "Couldn't open data file:" << DataFileFullNameAndPath;
 
 		return nullptr;
 	}

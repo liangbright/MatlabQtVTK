@@ -35,7 +35,7 @@ public:
 
 public slots:
 	void HandleNewConnection();
-
+	
 private:
 	bool InitializeTaskFolders();
 
