@@ -51,6 +51,8 @@ QVtkFigure::QVtkFigure(quint64 Handle)
 	m_MainWindow->CreateMenus(this);
 
 	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::Close);
+
+	m_time.start();
 }
 
 QVtkFigure::~QVtkFigure()
@@ -151,6 +153,22 @@ vtkRenderer* QVtkFigure::GetRenderer()
 
 quint64 QVtkFigure::GeneratePropHandle()
 {
+	auto StartTime = m_time.elapsed();
+	auto EndTime = StartTime;
+
+	while (true)
+	{
+		EndTime = m_time.elapsed();
+
+		if (EndTime - StartTime > 1)
+		{
+			break;
+		}
+	}
+
+	return (quint64)EndTime;
+
+	/*  only 1 handler per sec 
 	auto StartTime = std::time(nullptr); // time_t to double -> overflow ?
 
 	auto EndTime = StartTime;
@@ -166,6 +184,7 @@ quint64 QVtkFigure::GeneratePropHandle()
 	}
 
 	return (quint64)EndTime;
+	*/
 }
 
 

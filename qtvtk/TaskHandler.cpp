@@ -17,6 +17,8 @@
 TaskHandler::TaskHandler()
 {
 	this->CreateMatlabCommandTranslator();
+
+	m_time.start();
 }
 
 TaskHandler::~TaskHandler()
@@ -897,6 +899,23 @@ VtkDataTypeEnum TaskHandler::MapMatlabDataTypeToVtkDataType(QString MatlabDataTy
 
 quint64 TaskHandler::GenerateFigureHandle()
 {
+	auto StartTime = m_time.elapsed();
+	auto EndTime = StartTime;
+
+	while (true)
+	{
+		EndTime = m_time.elapsed();
+
+		if (EndTime - StartTime > 1)
+		{
+			break;
+		}
+	}
+
+	return (quint64)EndTime;
+
+	/*  only 1 handler per sec
+
 	auto StartTime = std::time(nullptr); // time_t to double -> overflow ?
 
 	auto EndTime = StartTime;
@@ -912,4 +931,5 @@ quint64 TaskHandler::GenerateFigureHandle()
 	}
 
 	return (quint64)EndTime;
+	*/
 }

@@ -5,6 +5,7 @@
 #include <qstring.h>
 #include <QStringList>
 #include <qmap.h>
+#include <QTime>
 
 #include <vtkSmartPointer.h>
 #include <vtkType.h>
@@ -106,6 +107,8 @@ private:
 	QMap<QString, std::function<bool(TaskHandler*, const TaskInformation&)>> m_MatlabCommandTranslator;
 
 	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord;
+
+	QTime m_time;
 
 public:
 	TaskHandler();

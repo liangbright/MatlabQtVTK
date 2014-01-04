@@ -3,12 +3,13 @@
 
 #include <qobject.h>
 #include <qstring.h>
+#include <QTime>
 
 #include <vtkProp.h>
 #include <vtkPolyData.h>
 #include <QVTKWidget.h>
 
-#include <ctime>
+//#include <ctime>
 #include <unordered_map>
 
 #include "QVtkFigureMainWindow.h"
@@ -44,6 +45,8 @@ private:
 	vtkRenderer* m_Renderer = nullptr;
 
 	std::unordered_map<quint64, PropInfomration> m_PropRecord;
+
+	QTime  m_time;
 
 public:
 	QVtkFigure(quint64);
