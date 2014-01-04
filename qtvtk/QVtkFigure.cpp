@@ -160,7 +160,7 @@ quint64 QVtkFigure::GeneratePropHandle()
 	{
 		EndTime = m_time.elapsed();
 
-		if (EndTime - StartTime > 1)
+		if (EndTime - StartTime >= 1)
 		{
 			break;
 		}
@@ -177,7 +177,7 @@ quint64 QVtkFigure::GeneratePropHandle()
 	{
 		EndTime = std::time(nullptr);
 
-		if (EndTime - StartTime > 1)
+		if (EndTime - StartTime >= 1)
 		{
 			break;
 		}
