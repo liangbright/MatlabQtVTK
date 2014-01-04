@@ -24,13 +24,13 @@ public:
 	QVtkFigureMainWindow();
 	~QVtkFigureMainWindow();
 
-	void closeEvent(QCloseEvent*);
+	void closeEvent(QCloseEvent* event);
 
-	void CreateMenus(QVtkFigure*);
+	void CreateMenus(QVtkFigure* Figure);
 
-	void AddPropMenu(QVtkFigure*, PropInfomration*);
+	void AddPropMenu(QVtkFigure* Figure, PropInfomration* PropInfo);
 
-	void RemovePropMenu(PropInfomration*);
+	void RemovePropMenu(PropInfomration* PropInfo);
 
 signals:
 	void UserCloseMainWindow();

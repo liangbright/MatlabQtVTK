@@ -71,9 +71,9 @@ void TaskHandler::CloseQVtkFigure()
 }
 
 
-bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& Task, QString ResultFileName, QString FailureInfo)
+bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo)
 {
-	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
+	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
 
 	QFile ResultFile(tempName);
 
@@ -98,7 +98,7 @@ bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& Task, QString Resu
 	ResultFile.write(ResultDoc.toJson());
 	ResultFile.close();
 
-	ResultFile.rename(Task.Path + Task.FolderName + "/" + ResultFileName);
+	ResultFile.rename(TaskInfo.Path + TaskInfo.FolderName + "/" + ResultFileName);
 
 	return true;
 }
@@ -174,11 +174,11 @@ bool TaskHandler::run_vtkfigure(const TaskInformation& Task)
 }
 
 
-bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
+bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 {
 	qDebug() << "run_vtkplotpoint";
 
-	QFile TaskFile(Task.GetFullFileNameAndPath());
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -213,7 +213,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "FigureHandle is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
@@ -227,7 +227,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 		if (Figure == nullptr)
 		{
 			QString FailureInfo = "FigureHandle is null in m_FigureRecord";			
-			TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+			TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 			qWarning() << FailureInfo;
 			return false;
 		}
@@ -235,7 +235,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "FigureHandle is invalid";		
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
@@ -250,7 +250,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "PointNum is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
@@ -263,7 +263,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "PointDataType is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
@@ -307,23 +307,25 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	it = TaskObject.find("PointDataFileName");
 	if (it != TaskObject.end())
 	{ 
-		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString();
+		DataFileFullNameAndPath = TaskInfo.GetFullPath() + it.value().toString();
 	}
 	else
 	{
 		QString FailureInfo = "PointDataFileName is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 	
 	//--------------------- Get the data ---------------------------------------//
-	auto Point = ReadPointData(DataFileFullNameAndPath, PointNum, DataType);
+
+	vtkPoints* Point = nullptr;
+	auto IsReadOK = ReadPointData(DataFileFullNameAndPath, PointNum, DataType, &Point);
 
 	if (Point == nullptr)
 	{
 		QString FailureInfo = "Point Data is not loaded";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
@@ -332,7 +334,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	auto PropHandle = Figure->PlotPoint(Point);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
+	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
 
 	QFile ResultFile(tempName);
 
@@ -355,7 +357,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 	ResultFile.write(ResultDoc.toJson());
 	ResultFile.close();
 
-	ResultFile.rename(Task.Path + Task.FolderName + "/" + ResultFileName);
+	ResultFile.rename(TaskInfo.Path + TaskInfo.FolderName + "/" + ResultFileName);
 	//-----------------------------Done---------------------------------------------------//
 	return true;
 }
@@ -579,16 +581,16 @@ bool TaskHandler::run_vtkdeleteprop(const TaskInformation& Task)
 }
 
 
-bool TaskHandler::RunTask(const TaskInformation& Task)
+bool TaskHandler::RunTask(const TaskInformation& TaskInfo)
 {	
-	QFile TaskFile(Task.GetFullFileNameAndPath());
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly)) 
 	{
 		qWarning("Couldn't open task file (*.json)");
-		qWarning() << "Path" << Task.Path;
-		qWarning() << "FolderName" << Task.FolderName;
-		qWarning() << "FileName" << Task.GetFileName();
+		qWarning() << "Path" << TaskInfo.Path;
+		qWarning() << "FolderName" << TaskInfo.FolderName;
+		qWarning() << "FileName" << TaskInfo.GetFileName();
 
 		return false;
 	}
@@ -617,16 +619,16 @@ bool TaskHandler::RunTask(const TaskInformation& Task)
 	if (it2 != m_MatlabCommandTranslator.end())
 	{
 		auto function = it2.value();
-		return function(this, Task);
+		return function(this, TaskInfo);
 	}
 
 	return false;
 }
 
 
-void TaskHandler::WriteExampleTaskFile(const TaskInformation& Task)
+void TaskHandler::WriteExampleTaskFile(const TaskInformation& TaskInfo)
 {
-	QFile TaskFile(Task.GetFullFileNameAndPath());
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::WriteOnly))
 	{
@@ -652,9 +654,9 @@ void TaskHandler::WriteExampleTaskFile(const TaskInformation& Task)
 }
 
 
-void TaskHandler::ReadExampleTaskFile(const TaskInformation& Task)
+void TaskHandler::ReadExampleTaskFile(const TaskInformation& TaskInfo)
 {
-	QFile TaskFile(Task.GetFullFileNameAndPath());
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -695,18 +697,27 @@ void TaskHandler::ReadExampleTaskFile(const TaskInformation& Task)
 	qDebug() << "PropHandle:" << PropHandle;
 }
 
-
-vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType)
+//========================== Read point data file =================================================
+//Input:
+// DataFileFullNameAndPath, PointNum, MatlabDataType
+//Output:
+//  PointData: nullptr or pointer to data
+bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType, \
+	                            vtkPoints** PointData)
 {
+	//---------------------------------------------------------------------------------------//
+	// defalut value
+	*PointData = nullptr;
+	//---------------------------------------------------------------------------------------//
+
 	QFile DataFile(DataFileFullNameAndPath);
 
 	if (!DataFile.open(QIODevice::ReadOnly))
 	{
 		qWarning() << "Couldn't open data file:" << DataFileFullNameAndPath;
 
-		return nullptr;
+		return false;
 	}
-
 	//---------------------------------------------------------------------------------------//
 	qint64 BypesofDataFile = DataFile.size();
 
@@ -728,16 +739,16 @@ vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 P
 	if (BypesofDataFile != BypesofPointData)
 	{
 		qWarning("Data file size is not equal to point-set size");
-		return nullptr;
+		return false;
 	}
 	//---------------------------------------------------------------------------------------//
-	auto PointData = vtkPoints::New();
-
+	auto Point = vtkPoints::New();
+	
 	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(MatlabDataType);
 
-	PointData->SetDataType(VtkDataType);
+	Point->SetDataType(VtkDataType);
 
-	PointData->SetNumberOfPoints(PointNum);
+	Point->SetNumberOfPoints(PointNum);
 
 	if (MatlabDataType == m_MatlabDataTypeList.Double)
 	{
@@ -749,11 +760,11 @@ vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 P
 
 			if (BypesofPos != 24)
 			{
-				PointData->Delete();
-				return nullptr;
+				Point->Delete();
+				return false;
 			}
 
-			PointData->InsertPoint(i, pos);
+			Point->InsertPoint(i, pos);
 		}
 	}
 	else if (MatlabDataType == m_MatlabDataTypeList.Single)
@@ -766,35 +777,44 @@ vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 P
 
 			if (BypesofPos != 12)
 			{
-				PointData->Delete();
-				return nullptr;
+				Point->Delete();
+				return false;
 			}
 
-			PointData->InsertPoint(i, pos);
+			Point->InsertPoint(i, pos);
 		}
 	}
 
-	PointData->Modified();
+	Point->Modified();
 
-	return PointData;
+	*PointData = Point;
+
+	return true;
 }
 
 
-vtkPolyData* TaskHandler::ReadMeshData(QString PathAndFileName, quint64 ElementNum, QString MatlabDataType)
+bool TaskHandler::ReadMeshData(QString PathAndFileName, quint64 ElementNum, QString MatlabDataType, \
+	                           vtkPolyData** PolyData)
 {
 	return nullptr;
 }
 
 
-vtkImageData* TaskHandler::ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType)
+bool TaskHandler::ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType, \
+	                            vtkImageData** ImageData)
 {
+	//---------------------------------------------------------------------------------------//
+	// Initialize the output
+	*ImageData = nullptr;
+	//---------------------------------------------------------------------------------------//
+
 	QFile DataFile(DataFileFullNameAndPath);
 
 	if (!DataFile.open(QIODevice::ReadOnly))
 	{
 		qWarning("Couldn't open data file.");
 
-		return nullptr;
+		return false;
 	}
 
 	//---------------------------------------------------------------------------------------//
@@ -820,50 +840,52 @@ vtkImageData* TaskHandler::ReadImageData(QString DataFileFullNameAndPath, int Im
 	if (BypesofDataFile != BypesofImageData)
 	{
 		qWarning("Data file size is not equal to image size");
-		return nullptr;
+		return false;
 	}
 	//---------------------------------------------------------------------------------------//
 
-	auto ImageData = vtkImageData::New();
+	auto Image = vtkImageData::New();
 
 	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(MatlabDataType);
 
-	ImageData->SetScalarType(VtkDataType, ImageData->GetInformation());
+	Image->SetScalarType(VtkDataType, Image->GetInformation());
 
-	ImageData->SetNumberOfScalarComponents(1, ImageData->GetInformation());
+	Image->SetNumberOfScalarComponents(1, Image->GetInformation());
 
-	qDebug() << "image data for type: " << ImageData->GetScalarTypeAsString();
+	qDebug() << "image data for type: " << Image->GetScalarTypeAsString();
 
-	ImageData->SetDimensions(ImageSize[0], ImageSize[1], ImageSize[2]);
+	Image->SetDimensions(ImageSize[0], ImageSize[1], ImageSize[2]);
 
 	int dims[3];
-	ImageData->GetDimensions(dims);
+	Image->GetDimensions(dims);
 	qDebug() << "image data dims: " << dims[0] << dims[1] << dims[2];
 
-	ImageData->AllocateScalars(ImageData->GetInformation());
+	Image->AllocateScalars(Image->GetInformation());
 
-	qDebug() << "image data memory size: " << ImageData->GetActualMemorySize() * 1024L;
+	qDebug() << "image data memory size: " << Image->GetActualMemorySize() * 1024L;
 
-	ImageData->GetDimensions(dims);
+	Image->GetDimensions(dims);
 	qDebug() << "image data dims: " << dims[0] << dims[1] << dims[2];
 
-	qDebug() << "components:" << ImageData->GetNumberOfScalarComponents();
-	qDebug() << "scalar size:" << ImageData->GetScalarSize();
+	qDebug() << "components:" << Image->GetNumberOfScalarComponents();
+	qDebug() << "scalar size:" << Image->GetScalarSize();
 
-	void *dataPtr = ImageData->GetScalarPointer();
+	void *dataPtr = Image->GetScalarPointer();
 
 	auto BypesofOutput = DataFile.read((char *)dataPtr, BypesofImageData);
 
 	if (BypesofDataFile != BypesofImageData)
 	{
 		qWarning("Data file size is not equal to image size");
-		ImageData->Delete();
-		return nullptr;
+		Image->Delete();
+		return false;
 	}
 
-	ImageData->Modified();
+	Image->Modified();
 
-	return ImageData;
+	*ImageData = Image;
+
+	return true;
 }
 
 

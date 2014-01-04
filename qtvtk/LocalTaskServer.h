@@ -16,7 +16,9 @@ class LocalTaskServer : public QObject
 private:
 	
     std::unique_ptr<QTcpServer> m_TcpServer;
+	
 	qint16 m_ServerPort = 12345;
+
 	QHostAddress m_ServerAdress = QHostAddress::LocalHost;
 
 	std::unique_ptr<TaskHandler> m_TaskHandler;
@@ -31,8 +33,6 @@ public:
 
 	void Shutdown();
 
-	bool ReadTaskHandle(unsigned long long*);
-
 public slots:
 	void HandleNewConnection();
 	
@@ -43,7 +43,7 @@ private:
 
 	std::vector<TaskInformation> GetAllPendingTasks();
 
-	bool AddProcessedTask(TaskInformation);
+	bool AddProcessedTask(TaskInformation TaskInfo);
 };
 
 #endif

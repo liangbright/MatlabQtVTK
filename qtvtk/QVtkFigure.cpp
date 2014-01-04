@@ -201,11 +201,11 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 	{
 		QString tempText = "<" + PropInfo.Name+ ">";
 
-		m_PropRecord[PropInfo.Handle] = PropInfo;
-
 		this->m_Renderer->AddViewProp(PropInfo.Prop);
 
 		m_MainWindow->AddPropMenu(this, &PropInfo);
+
+		m_PropRecord[PropInfo.Handle] = PropInfo;
 
 		// when adding first component: automatically reset view
 		if (IsFirst)
@@ -265,11 +265,15 @@ void QVtkFigure::ChangePropVisibility()
 
 }
 
-//===================================== Plot Point ==============================================================
-
-quint64 QVtkFigure::PlotPoint(vtkPoints* points)
+//===================================== Plot Point =====================================
+// Input:
+//   Points: 
+// Output
+//   PropInfo.Handle : 0 if something goes wrong; >0 is good
+//---------------------------------------------------------------------------------------
+quint64 QVtkFigure::PlotPoint(vtkPoints* Points)
 {
-	auto Prop = this->CreatePointProp(points);
+	auto Prop = this->CreatePointProp(Points);
 
 	PropInfomration PropInfo;
 
@@ -279,19 +283,20 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* points)
 
 	PropInfo.Prop = Prop;
 
-	PropInfo.DataSource = points;
+	PropInfo.DataSource = Points;
 
 	this->AddProp(PropInfo);
 
 	return PropInfo.Handle;
 }
 
-vtkProp* QVtkFigure::CreatePointProp(vtkPoints *points)
+
+vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Points)
 {
-	std::cout << "vtk points: " << points << std::endl;
+	std::cout << "vtk points: " << Points << std::endl;
 
 	auto InputData = vtkSmartPointer<vtkPolyData>::New();
-	InputData->SetPoints(points);
+	InputData->SetPoints(Points);
 
 	// draw spheres at the points
 	auto Sphere = vtkSmartPointer<vtkSphereSource>::New();
@@ -326,7 +331,6 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *points)
 	// crash here
 	*/
 }
-//===================================== End of Plot Point ==============================================================
 
 //======================================= Show Image ===================================================================
 quint64 QVtkFigure::ShowImage(vtkImageData* ImageData)
@@ -338,4 +342,3 @@ vtkProp* QVtkFigure::CreateImageProp(vtkImageData* ImageData)
 {
 	return nullptr;
 }
-//===================================== End of Show Image ==============================================================

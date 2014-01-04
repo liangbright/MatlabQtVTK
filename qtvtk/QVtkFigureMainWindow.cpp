@@ -21,12 +21,24 @@ QVtkFigureMainWindow::~QVtkFigureMainWindow()
 	//delete ???Action;
 }
 
+//------------------------Handle closeEvent-----------------------------------------
+// Input:
+//   event : user click "X"
+// Output:
+//   signal : UserCloseMainWindow
+//------------------------------------------------------------------------------------------
 void QVtkFigureMainWindow::closeEvent(QCloseEvent* event)
 {
 	emit(UserCloseMainWindow());
 	//QMainWindow::closeEvent(event);
 }
 
+//------------------------Create menu of the mainwindow-----------------------------------------
+// Input and Output: 
+//   Figure   : connect signal
+// Output:
+//   m_FileMenu, m_SaveAction, m_PropListMenu
+//------------------------------------------------------------------------------------------
 void QVtkFigureMainWindow::CreateMenus(QVtkFigure *Figure)
 {
 	// file menu
@@ -44,7 +56,11 @@ void QVtkFigureMainWindow::CreateMenus(QVtkFigure *Figure)
 	m_PropListMenu = this->menuBar()->addMenu("PropList");
 }
 
-
+//------------------------Add menu of the prop-----------------------------------------
+// Input and Output: 
+// 1. PropInfo : assign pointer(PropMenu) to new prop menu 
+// 2. Figure   : connect signal
+//------------------------------------------------------------------------------------------
 void QVtkFigureMainWindow::AddPropMenu(QVtkFigure* Figure, PropInfomration* PropInfo)
 {	
 	PropInfo->PropMenu = new QMenu(PropInfo->Name);
@@ -65,7 +81,10 @@ void QVtkFigureMainWindow::AddPropMenu(QVtkFigure* Figure, PropInfomration* Prop
 
 }
 
-
+//=============================Remove menu of the prop=======================================
+// Input and Output: 
+// 1. PropInfo : use pointer(PropMenu) to delete prop menu 
+//------------------------------------------------------------------------------------------
 void QVtkFigureMainWindow::RemovePropMenu(PropInfomration* PropInfo)
 {
 	if (PropInfo->PropMenu != nullptr)

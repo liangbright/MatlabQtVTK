@@ -106,7 +106,8 @@ private:
 
 	QMap<QString, std::function<bool(TaskHandler*, const TaskInformation&)>> m_MatlabCommandTranslator;
 
-	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord;
+	// <FigureHandle, UniquePtr_Figure>
+	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord; 
 
 	QTime m_time;
 
@@ -116,41 +117,43 @@ public:
 
 	void CreateMatlabCommandTranslator();
 
-	bool RunTask(const TaskInformation&);
+	bool RunTask(const TaskInformation& TaskInfo);
 
-	void WriteExampleTaskFile(const TaskInformation&);
-	void ReadExampleTaskFile(const TaskInformation&);
+	void WriteExampleTaskFile(const TaskInformation& TaskInfo);
+	void ReadExampleTaskFile(const TaskInformation& TaskInfo);
 
 public slots:
     void CloseQVtkFigure();
 
 private:	
 	//----------------------- read data file -------------------//
-	vtkPoints* ReadPointData(QString, quint64, QString);
 
-	vtkImageData* ReadImageData(QString, int[3], QString);
+	bool ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType, vtkPoints** PointData);
 
-	vtkPolyData* ReadMeshData(QString, quint64, QString);
+	bool ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType, vtkImageData** ImageData);
+
+	bool ReadMeshData(QString DataFileFullNameAndPath, quint64 ElementNum, QString MatlabDataType, vtkPolyData** PolyData);
 	//----------------------------------------------------------//
 
 	//----------------------- process matlab command -------------------//
-	bool run_vtkfigure(const TaskInformation&);
 
-	bool run_vtkplotpoint(const TaskInformation&);
+	bool run_vtkfigure(const TaskInformation& TaskInfo);
 
-	bool run_vtkshowimage(const TaskInformation&);
+	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
 
-	bool run_vtkshowmesh(const TaskInformation&);
+	bool run_vtkshowimage(const TaskInformation& TaskInfo);
+
+	bool run_vtkshowmesh(const TaskInformation& TaskInfo);
 	//---------------------------------------
-	bool run_vtkdeleteprop(const TaskInformation&);
+	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);
 
 	//----------------------------------------------------------//
 	
-	bool WriteTaskFailureInfo(const TaskInformation&, QString, QString);
+	bool WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo);
 
 	quint64 GenerateFigureHandle();
 
-	VtkDataTypeEnum MapMatlabDataTypeToVtkDataType(QString);
+	VtkDataTypeEnum MapMatlabDataTypeToVtkDataType(QString MatlabDataType);
 
 };
 

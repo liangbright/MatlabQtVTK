@@ -163,24 +163,24 @@ std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
 	return TaskList;
 }
 
-
-bool LocalTaskServer::AddProcessedTask(TaskInformation Task)
+//================================ Move Processed Task files to another folder ===============
+// move *.json to "M:/CompletedTasks"
+// delete Task folder
+bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 {
-	// move *.json to "M:/CompletedTasks"
-	// delete Task folder
 
-	QDir TaskDir(Task.Path + Task.FolderName);
+	QDir TaskDir(TaskInfo.Path + TaskInfo.FolderName);
 	if (TaskDir.exists() == false)
 	{
 		qDebug() << "Strange: TaskDir does not exist";
-		qDebug() << "Task.Path:" << Task.Path;
-		qDebug() << "Task.FolderName:" << Task.FolderName;
+		qDebug() << "Task.Path:" << TaskInfo.Path;
+		qDebug() << "Task.FolderName:" << TaskInfo.FolderName;
 		return false;
 	}
 
 	QString CompletedTaskPath = "M:/CompletedTasks/";
 
-	QString tempFolder = CompletedTaskPath + "~" + Task.FolderName;
+	QString tempFolder = CompletedTaskPath + "~" + TaskInfo.FolderName;
 
 	QDir CompletedTaskDir(tempFolder);
 	if (CompletedTaskDir.exists() == true)
@@ -208,7 +208,7 @@ bool LocalTaskServer::AddProcessedTask(TaskInformation Task)
 	for (int i = 0; i < list.size(); ++i)
 	{
 		auto sourceFileName = list.at(i);
-		auto sourceFile = Task.Path + Task.FolderName + "/" + sourceFileName;
+		auto sourceFile = TaskInfo.Path + TaskInfo.FolderName + "/" + sourceFileName;
 		auto destinationFile = tempFolder + "/" + sourceFileName;
 		auto tempresult = QFile::copy(sourceFile, destinationFile);
 
@@ -218,7 +218,7 @@ bool LocalTaskServer::AddProcessedTask(TaskInformation Task)
 		}
 	}
 
-	CompletedTaskDir.rename(tempFolder, CompletedTaskPath + Task.FolderName);
+	CompletedTaskDir.rename(tempFolder, CompletedTaskPath + TaskInfo.FolderName);
 
 	TaskDir.removeRecursively();
 

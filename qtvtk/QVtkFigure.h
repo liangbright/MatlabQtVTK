@@ -49,10 +49,8 @@ private:
 	QTime  m_time;
 
 public:
-	QVtkFigure(quint64);
+	QVtkFigure(quint64 Handle);
 	~QVtkFigure();
-
-	void closeEvent(QCloseEvent*);
 
 	quint64 GetHandle() 
 	{
@@ -61,21 +59,21 @@ public:
 
 	void CreateMenus();
 
-	void SetTitle(QString);
+	void SetTitle(QString Title);
 
-	void AddProp(PropInfomration);
+	void AddProp(PropInfomration PropInfo);
 
-	void RemoveProp(quint64);
+	void RemoveProp(quint64 PropHandle);
 
 	quint64 GeneratePropHandle();
 
-	vtkProp* CreatePointProp(vtkPoints*);
+	vtkProp* CreatePointProp(vtkPoints* Points);
 
-	quint64 PlotPoint(vtkPoints*);
+	quint64 PlotPoint(vtkPoints* Points);
 
-	vtkProp* CreateImageProp(vtkImageData*);
+	vtkProp* CreateImageProp(vtkImageData* ImageData);
 
-	quint64 ShowImage(vtkImageData*);
+	quint64 ShowImage(vtkImageData* ImageData);
 
 	vtkRenderWindow* GetRenderWindow();
 
