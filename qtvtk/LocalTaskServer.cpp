@@ -68,7 +68,7 @@ bool LocalTaskServer::Startup()
 		return false;
 	}
 
-	qDebug() << tr("The TaskServer is running on port %1.").arg(m_TcpServer->serverPort());
+	qDebug() << tr("The LocalTaskServer is listening on port %1").arg(m_TcpServer->serverPort());
 
 	connect(m_TcpServer.get(), &QTcpServer::newConnection, this, &LocalTaskServer::HandleNewConnection);
 
@@ -96,19 +96,19 @@ void LocalTaskServer::HandleNewConnection()
 
 		qDebug("new connection: processing new task");
 
-		auto TaskList = this->GetAllPendingTasks();
-		for (int i = 0; i < TaskList.size(); ++i)
+		auto TaskInfoList = this->GetAllPendingTasks();
+		for (int i = 0; i < TaskInfoList.size(); ++i)
 		{			
-			auto Task = TaskList.at(i);
+			auto TaskInfo = TaskInfoList.at(i);
 
-			auto IsSucess = m_TaskHandler->RunTask(Task);
+			auto IsSucess = m_TaskHandler->RunTask(TaskInfo);
 
 			if (IsSucess == false)
-				qDebug("Can not run the task");
+				qDebug() << "Can not run the task : " << TaskInfo.FolderName;
 			else
 				qDebug("The task is sucessfully completed");
 
-			this->AddProcessedTask(Task);
+			this->AddProcessedTask(TaskInfo);
 		}
 		// close the connection
 		socket->close();
@@ -119,13 +119,33 @@ void LocalTaskServer::HandleNewConnection()
 
 bool LocalTaskServer::InitializeTaskFolders()
 {
-	QDir dir("M:");
+	QDir DiskDir("M:");
+	if (DiskDir.exists() == false)
+	{
+		qWarning("Disk M:/ is not there");
+		return false;
+	}
 
-	dir.mkdir("PendingTasks");
+	QDir PendingTasksDir("M:/PendingTasks");
+	if (PendingTasksDir.exists() == true)
+	{	
+		PendingTasksDir.removeRecursively();
+	}
+	DiskDir.mkdir("PendingTasks");
+	
+	QDir ProcessedTasksDir("M:/ProcessedTasks");
+	if (ProcessedTasksDir.exists() == true)
+	{
+		ProcessedTasksDir.removeRecursively();
+	}
+	DiskDir.mkdir("ProcessedTasks");
 
-	dir.mkdir("ProcessedTasks");
-
-	dir.mkdir("ExampleTasks");
+	QDir ExampleTasksDir("M:/ExampleTasks");
+	if (ExampleTasksDir.exists() == true)
+	{
+		ExampleTasksDir.removeRecursively();
+	}
+	DiskDir.mkdir("ExampleTasks");
 
 	return true;
 }
@@ -164,8 +184,8 @@ std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
 }
 
 //================================ Move Processed Task files to another folder ===============
-// move *.json to "M:/CompletedTasks"
-// delete Task folder
+// move *.json from "M:/PendingTasks/xxx" to "M:/ProcessedTasks/xxx"
+// delete Task folder "M:/PendingTasks/xxx"
 bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 {
 
@@ -178,21 +198,21 @@ bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 		return false;
 	}
 
-	QString CompletedTaskPath = "M:/CompletedTasks/";
+	QString ProcessedTaskPath = "M:/ProcessedTasks/";
 
-	QString tempFolder = CompletedTaskPath + "~" + TaskInfo.FolderName;
+	QString tempFolder = ProcessedTaskPath + "~" + TaskInfo.FolderName;
 
-	QDir CompletedTaskDir(tempFolder);
-	if (CompletedTaskDir.exists() == true)
+	QDir ProcessedTaskDir(tempFolder);
+	if (ProcessedTaskDir.exists() == true)
 	{
-		CompletedTaskDir.removeRecursively();
+		ProcessedTaskDir.removeRecursively();
 	}
 
-	auto Isthere = CompletedTaskDir.mkpath(tempFolder);
+	auto Isthere = ProcessedTaskDir.mkpath(tempFolder);
 
 	if (Isthere == false)
 	{
-		qWarning() << "Fail to create temp CompletedTaskDir: " << tempFolder;
+		qWarning() << "Fail to create tempFoler in ProcessedTaskDir: " << tempFolder;
 		// must delete completed task from "M:/pendingtasks/" 
 		TaskDir.removeRecursively();
 		return false;
@@ -218,7 +238,7 @@ bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 		}
 	}
 
-	CompletedTaskDir.rename(tempFolder, CompletedTaskPath + TaskInfo.FolderName);
+	ProcessedTaskDir.rename(tempFolder, ProcessedTaskPath + TaskInfo.FolderName);
 
 	TaskDir.removeRecursively();
 

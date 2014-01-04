@@ -38,9 +38,9 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplotpoint);
 		
-	Commmand = "vtkshowimage";
+	Commmand = "vtkshowvolume";
 	m_MatlabCommandList.append(Commmand);
-	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowimage);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowvolume);
 
 	Commmand = "vtkshowmesh";
 	m_MatlabCommandList.append(Commmand);
@@ -363,9 +363,9 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 }
 
 
-bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
+bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 {
-	QFile TaskFile(Task.GetFullFileNameAndPath());
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
 
 	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
@@ -378,7 +378,8 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	QJsonObject TaskObject = TaskDoc.object();
 
 	//-------------------- Read some Information from Task.json ----------------------------------//
-	// get ResultFileName
+
+	// get ResultFileName ----------------------------------------------------------
 	QString ResultFileName;
 	auto it = TaskObject.find("ResultFileName");
 	if (it != TaskObject.end())
@@ -391,7 +392,7 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 		return false;
 	}
 
-	//get FigureHandle
+	//get FigureHandle ----------------------------------------------------------
 	quint64 FigureHandle = 0; // invalid handle
 	it = TaskObject.find("FigureHandle");
 	if (it != TaskObject.end())
@@ -399,12 +400,12 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "FigureHandle is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
-	//check FigureHandle
+	//check FigureHandle ----------------------------------------------------------
 	QVtkFigure* Figure = nullptr;
 	auto it_Fig = m_FigureRecord.find(FigureHandle);
 	if (it_Fig != m_FigureRecord.end())
@@ -413,7 +414,7 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 		if (Figure == nullptr)
 		{
 			QString FailureInfo = "Figure is invalid";
-			TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+			TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 			qWarning() << FailureInfo;
 			return false;
 		}
@@ -421,12 +422,12 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "FigureHandle is invalid";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
-	//get image size
+	//get image size ----------------------------------------------------------
 	int ImageSize[3] = { 0, 0, 0 };
 	bool IsImageSizeOK = true;
 
@@ -457,12 +458,12 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	if (IsImageSizeOK == false)
 	{
 		QString FailureInfo = "ImageSize is invalid";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
-	//get image origin
+	//get image origin ----------------------------------------------------------
 	double Origin[3] = { 0.0, 0.0, 0.0 };
 	bool IsOriginOK = true;
 
@@ -493,12 +494,12 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	if (IsOriginOK == false)
 	{
 		QString FailureInfo = "Origin is invalid";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
-	// get MatlabDataType
+	// get MatlabDataType ----------------------------------------------------------
 	QString DataType;
 	it = TaskObject.find("DataType");
 	if (it != TaskObject.end())
@@ -506,40 +507,75 @@ bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 	else
 	{
 		QString FailureInfo = "DataType is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
-	// get ImageDataFileName
+	// get ImageDataFileName ----------------------------------------------------------
 	QString DataFileFullNameAndPath;
 	it = TaskObject.find("ImageDataFileName");
 	if (it != TaskObject.end())
 	{
-		DataFileFullNameAndPath = Task.GetFullPath() + it.value().toString() + ".data";
+		DataFileFullNameAndPath = TaskInfo.GetFullPath() + it.value().toString() + ".data";
 	}
 	else
 	{
 		QString FailureInfo = "ImageDataFileName is unknown";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 
+	// get DataRange ----------------------------------------------------------
+	double DataRange[2];
+	it = TaskObject.find("DataRange_Min");
+	if (it != TaskObject.end())
+	{
+		DataRange[0] = it.value().toDouble();
+	}
+	else
+	{
+		QString FailureInfo = "DataRange_Min is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	it = TaskObject.find("DataRange_Max");
+	if (it != TaskObject.end())
+	{
+		DataRange[1] = it.value().toDouble();
+	}
+	else
+	{
+		QString FailureInfo = "DataRange_Max is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//--------------------- Get VolumeProperty ---------------------------------------
+	auto VolumeProperty = Figure->GetDefaultVolumeProperty(DataRange);
+
+	//--------------------- Get RenderMethod ---------------------------------------
+	auto RenderMethod = Figure->GetDefaultRenderMethod();
+
 	//--------------------- Get the data ---------------------------------------//
-	auto ImageData = ReadImageData(DataFileFullNameAndPath, ImageSize, DataType);
+	vtkImageData* ImageData = nullptr;
+	auto IsReadOK = ReadVolumeData(DataFileFullNameAndPath, ImageSize, DataType, &ImageData);
 	if (ImageData == nullptr)
 	{
 		QString FailureInfo = "ImageData is not loaded";
-		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
 	}
 	//---------------------- Show Image ----------------------------------------//
-	auto PropHandle = Figure->ShowImage(ImageData);
+	auto PropHandle = Figure->ShowVolume(ImageData, VolumeProperty, RenderMethod);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
+	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
 	QFile ResultFile(tempName);
 
 	if (!ResultFile.open(QIODevice::WriteOnly))
@@ -800,8 +836,8 @@ bool TaskHandler::ReadMeshData(QString PathAndFileName, quint64 ElementNum, QStr
 }
 
 
-bool TaskHandler::ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType, \
-	                            vtkImageData** ImageData)
+bool TaskHandler::ReadVolumeData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType, \
+	                             vtkImageData** ImageData)
 {
 	//---------------------------------------------------------------------------------------//
 	// Initialize the output

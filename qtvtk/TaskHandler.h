@@ -16,6 +16,7 @@
 
 #include "QVtkFigure.h"
 
+class vtkVolumeProperty;
 
 class TaskInformation
 {
@@ -126,27 +127,26 @@ public slots:
     void CloseQVtkFigure();
 
 private:	
-	//----------------------- read data file -------------------//
-
-	bool ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType, vtkPoints** PointData);
-
-	bool ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3], QString MatlabDataType, vtkImageData** ImageData);
-
-	bool ReadMeshData(QString DataFileFullNameAndPath, quint64 ElementNum, QString MatlabDataType, vtkPolyData** PolyData);
-	//----------------------------------------------------------//
-
 	//----------------------- process matlab command -------------------//
 
 	bool run_vtkfigure(const TaskInformation& TaskInfo);
 
-	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
+	//---------------------------------------
 
-	bool run_vtkshowimage(const TaskInformation& TaskInfo);
+	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
+	bool ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType, vtkPoints** PointData);
+	//---------------------------------------
+
+	bool run_vtkshowvolume(const TaskInformation& TaskInfo);
+	bool ReadVolumeData(QString DataFileFullNameAndPath, int VolumeSize[3], QString MatlabDataType, vtkImageData** VolumeData);
+	bool ReadVolumeProperty(QJsonObject PropertyObject, vtkVolumeProperty* VolumeProperty);	
+	//---------------------------------------
 
 	bool run_vtkshowmesh(const TaskInformation& TaskInfo);
+	bool ReadMeshData(QString DataFileFullNameAndPath, quint64 ElementNum, QString MatlabDataType, vtkPolyData** PolyData);
 	//---------------------------------------
-	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);
 
+	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);
 	//----------------------------------------------------------//
 	
 	bool WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo);

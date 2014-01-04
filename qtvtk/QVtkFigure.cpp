@@ -9,6 +9,7 @@
 #include <qfiledialog.h>
 #include <qdesktopservices.h>
 
+#include <QVTKWidget.h> 
 #include <vtkRenderer.h> 
 #include <vtkRenderWindow.h>
 #include <vtkSmartPointer.h>
@@ -23,7 +24,15 @@
 #include <vtkPNGWriter.h>
 #include <vtkJPEGWriter.h>
 #include <vtkWindowToImageFilter.h>
-#include <QVTKWidget.h> 
+#include <vtkColorTransferFunction.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkImageProperty.h>
+#include <vtkVolumeProperty.h>
+#include <vtkVolumeMapper.h>
+#include <vtkVolumeTextureMapper3D.h>
+#include <vtkGPUVolumeRayCastMapper.h>
+#include <vtkFixedPointVolumeRayCastMapper.h>
+
 
 #include "QVtkFigureMainWindow.h"
 #include "QVtkFigure.h"
@@ -332,13 +341,149 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Points)
 	*/
 }
 
-//======================================= Show Image ===================================================================
-quint64 QVtkFigure::ShowImage(vtkImageData* ImageData)
+//======================================= Show Volume Image ==============================================================
+quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord)
 {
-	return 0;
+	auto Prop = this->CreateVolumeProp(VolumeData, VolumeProperty, RenderMethord);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Name = "Image";
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = VolumeData;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
 }
 
-vtkProp* QVtkFigure::CreateImageProp(vtkImageData* ImageData)
+vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, \
+	                                  QString RenderMethord)
 {
-	return nullptr;
+	// fast but limited renderer: samples volume down
+	// raycasting may be nicer but is limited on data types
+	//vtkSmartVolumeMapper *smartVolumeMapper = vtkSmartVolumeMapper::New();
+
+	vtkVolumeMapper* VolumeMapper = nullptr;
+
+	if (RenderMethord == "RayCast") 
+	{
+		vtkGPUVolumeRayCastMapper *GpuRcMapper = vtkGPUVolumeRayCastMapper::New();
+
+		if (GpuRcMapper->IsRenderSupported(this->GetRenderWindow(), VolumeProperty)) 
+		{
+			qDebug("GPU OpenGL RayCasting enabled!");
+			VolumeMapper = GpuRcMapper;
+		}
+		// no fast GPU raycasting available.
+		else 
+		{
+			GpuRcMapper->Delete();
+
+			qDebug("SLOW software ray casting.");
+			//vtkVolumeRayCastCompositeFunction *compositeFunction = vtkVolumeRayCastCompositeFunction::New();
+			vtkFixedPointVolumeRayCastMapper *RcMapper = vtkFixedPointVolumeRayCastMapper::New();
+			RcMapper->SetBlendModeToComposite();
+			//raycastVolumeMapper->SetVolumeRayCastFunction(compositeFunction);
+			//compositeFunction->Delete();
+			//raycastVolumeMapper->AutoAdjustSampleDistancesOn();
+			
+			//Debug() << "sample distance" << raycastVolumeMapper->GetSampleDistance();
+
+			VolumeMapper = RcMapper;
+		}
+	}
+	else 
+	{
+		// max texture size for 3d textures: 128*256*256
+		// otherwise it is resized bevor rendering(SLOW!)
+		qDebug("3D texture mapping.");
+
+		int dims[3];
+		VolumeData->GetDimensions(dims);
+		if (dims[0] > 128 || dims[1] > 256 || dims[2] > 256) 
+		{
+			qDebug("WARNING: volume too large for efficient 3d texture mapping (128x256x256).");
+		}
+
+		VolumeMapper = vtkVolumeTextureMapper3D::New();
+		/*
+		else if(volumeData->Get) {
+		// use 2d texture mapping for bigger volumes
+		Debug("2D texture mapping.");
+		volumeMapper = vtkVolumeTextureMapper2D::New();
+		}
+		*/
+	}
+
+	VolumeMapper->SetInputData(VolumeData);
+
+	auto VolumeProp = vtkVolume::New();
+
+	VolumeProp->SetMapper(VolumeMapper);
+
+	VolumeProp->SetProperty(VolumeProperty);
+
+	VolumeProp->Modified();
+
+	return VolumeProp;
+}
+
+QString QVtkFigure::GetDefaultRenderMethod()
+{
+	return QString("RayCast");
+}
+
+vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(double DataRange[2])
+{
+	auto VolumeProperty = vtkVolumeProperty::New();
+
+	auto ColorTransferFunction = vtkSmartPointer<vtkColorTransferFunction>::New();
+
+	auto OpacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
+	
+	qDebug("default color LUT for range: %.2f - %.2f", DataRange[0], DataRange[1]);
+	//colorTransferFunction->HSVWrapOff();
+	//colorTransferFunction->SetColorSpaceToHSV();
+
+	ColorTransferFunction->SetColorSpaceToRGB();
+
+	//AddHSVSegment (double x1, double h1, double s1, double v1, double x2, double h2, double s2, double v2)
+	//colorTransferFunction->AddHSVPoint(range[0], 0.6667, 1, 1);
+	//colorTransferFunction->AddHSVPoint(range[1], 0, 1, 1);
+
+	double dataMin = DataRange[0];
+	double dataMax = DataRange[1];
+	double dataDiff = (dataMax - dataMin);
+
+	// matlab like jet color table
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.000), 0.0, 0.0, 0.5);
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.125), 0.0, 0.0, 1.0);
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.375), 0.0, 1.0, 1.0);
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.625), 1.0, 1.0, 0.0);
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.875), 1.0, 0.0, 0.0);
+	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*1.000), 0.5, 0.0, 0.0);
+
+	double step = (dataDiff / 10.0);
+	for (double i = DataRange[0]; i <= DataRange[1]; i += step)
+	{
+		auto *color = ColorTransferFunction->GetColor(i);
+		qDebug("auto color: %.2f -> %.2f %.2f %.2f", i, color[0], color[1], color[2]);
+	}
+	
+	// create default opacity lut, constant opacities over whole data range
+	double opacity = 0.05;
+	
+	OpacityTransferFunction->AddPoint(DataRange[0], opacity);
+	OpacityTransferFunction->AddPoint(DataRange[1], opacity);
+
+	VolumeProperty->SetColor(ColorTransferFunction);
+	
+	VolumeProperty->SetScalarOpacity(OpacityTransferFunction);
+
+	return VolumeProperty;
 }

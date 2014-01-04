@@ -14,6 +14,8 @@
 
 #include "QVtkFigureMainWindow.h"
 
+class vtkVolumeProperty;
+
 class PropInfomration
 {
 public:
@@ -67,13 +69,13 @@ public:
 
 	quint64 GeneratePropHandle();
 
+	quint64 PlotPoint(vtkPoints* Points);
 	vtkProp* CreatePointProp(vtkPoints* Points);
 
-	quint64 PlotPoint(vtkPoints* Points);
-
-	vtkProp* CreateImageProp(vtkImageData* ImageData);
-
-	quint64 ShowImage(vtkImageData* ImageData);
+	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
+	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
+	vtkVolumeProperty* GetDefaultVolumeProperty(double DataRange[2]);
+	QString GetDefaultRenderMethod();
 
 	vtkRenderWindow* GetRenderWindow();
 
