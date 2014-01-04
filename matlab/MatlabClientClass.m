@@ -41,24 +41,26 @@ end
 end
 
 function IsSucess = WriteTask(this, Taskhandle, Task)
-% Task is cell : {{key, value}, {key, value1, value2, value3},...}
+% Task.Text is cell : {{key, value}...}
 % key is string
 % value1 is string
 % value2 is matrix
 % for example:
-% {"Commmand", "vtkplotpoint"}
-% {"PointNum", "100"}
-% {"DataFileFullName", "Image.data", "int8", ImageData} 
-% ImageData (value3) will be saved as "Image.data" as int8(value2)
+% {'Commmand", 'vtkplotpoint'}
+% {PointNum", "100"}
+% {'DataFileFullName', 'Image.data'}
+% Task.Data is cell : {{key, value1, value2}...}
+% for example:
+% {'Image.data', 'double', Data} Data (value2) will be saved as "Image.data", and dataytpe is double(value1)
 
 % Taskhandle is string
 
 % write JsonObject to "M:/PendingTasks/Taskhandle/Task.json"
 % write Data to "M:/PendingTasks/Taskhandle/DataFileFullName"
-
+%--------------------------------------------------------------
 FilePath=['M:\PendingTasks\' Taskhandle '\'];
 mkdir(FilePath)
-
+%--------------------------------------------------------------
 FileName=[FilePath 'Task.json'];
 
 IsSucess=0;
@@ -75,10 +77,12 @@ fprintf(fid, '{\n');
 
 Prefix='    ';
 
-ElementNum=length(Task);
+TaskText=Task.Text;
+
+ElementNum=length(TaskText);
 
 for n=1:ElementNum
-    Element = Task{n};
+    Element = TaskText{n};
     [~, L]=size(Element);
     if  L == 2      
         if n < ElementNum
@@ -86,26 +90,7 @@ for n=1:ElementNum
         else
             TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\n'];
         end
-        
         fprintf(fid, TextLine);        
-    elseif L == 4
-        
-        if n < ElementNum
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' ',\n'];
-        else
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\n'];
-        end
-        
-        fprintf(fid, TextLine);  
-        DataFileName=[FilePath Element{2}];
-        datafid = fopen(DataFileName, 'w');
-        if datafid == -1
-            disp('can not open data file')
-            fclose(fid);
-            return
-        end
-        fwrite(datafid, Element{4}(:), Element{3});
-        fclose(datafid);
     else
         disp('Wrong Element @CellToJson')
         fclose(fid);
@@ -116,7 +101,23 @@ end
 fprintf(fid, '}\n');
 
 fclose(fid);
+%-------------------------------------------------------
+TaskData=Task.Data;
 
+DataElementNum=length(TaskData);
+
+for n=1:DataElementNum
+    DataElement = TaskData{n};
+    DataFileName=[FilePath DataElement{1}];
+    datafid = fopen(DataFileName, 'w');
+    if datafid == -1
+        disp('can not open data file')
+        fclose(datafid);
+        return
+    end
+    fwrite(datafid, DataElement{3}(:), DataElement{2});
+    fclose(datafid);
+end
 fclose('all');
 
 IsSucess=1;
@@ -166,7 +167,7 @@ function Result=ReadResult(this, Taskhandle, FileName)
 
 Name=['M:/CompletedTasks/' Taskhandle '/' FileName];
 Result = loadjson(Name);
-            
+
 end
 
 end

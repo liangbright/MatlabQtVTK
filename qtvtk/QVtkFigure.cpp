@@ -25,15 +25,15 @@
 #include <vtkWindowToImageFilter.h>
 #include <QVTKWidget.h> 
 
+#include "QVtkFigureMainWindow.h"
 #include "QVtkFigure.h"
 
-QVtkFigure::QVtkFigure()
+QVtkFigure::QVtkFigure(quint64 Handle)
 {
+	m_Handle = Handle;
 
-	qDebug("QVtkFigure: constructor");
-
-	m_MainWindow = new QMainWindow();
-
+	m_MainWindow = new QVtkFigureMainWindow();
+	
 	m_QVtkWidget = new QVTKWidget();
 
 	m_MainWindow->setCentralWidget(m_QVtkWidget);
@@ -41,65 +41,40 @@ QVtkFigure::QVtkFigure()
 	m_MainWindow->resize(512, 512);
 
 	m_QVtkWidget->resize(m_MainWindow->size());
+
 	m_QVtkWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
 	m_Renderer = vtkRenderer::New();
 
 	m_QVtkWidget->GetRenderWindow()->AddRenderer(m_Renderer);
 
-	this->CreateMenus();
+	m_MainWindow->CreateMenus(this);
+
+	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::Close);
 }
 
 QVtkFigure::~QVtkFigure()
 {
-	qDebug("QVtkFigure destructor.");
-
 	m_Renderer->Delete();
 
-	m_QVtkWidget->deleteLater();
-
-	// this may get deferred and cause vtk to spill leaks messages. 
-	// works fine when using delete window
-	// does deleteLater() work here as intended?
-
 	m_MainWindow->deleteLater();
-	//delete window;
 
 	// Qt memory management cleans these up:
 	//delete m_QVtkWidget;	
-	//delete ???Action;
-
-	emit(QVtkFigureDeleted());
 }
 
 
-void QVtkFigure::CreateMenus()
+void QVtkFigure::Refresh()
 {
-	// file menu
-	m_FileMenu = m_MainWindow->menuBar()->addMenu("&File");
-
-	// save as image
-	m_SaveAction = new QAction("&Save Window as ...", m_MainWindow);
-	m_SaveAction->setShortcuts(QKeySequence::SaveAs);
-	m_SaveAction->setStatusTip("Save Window as Image");
-
-	m_FileMenu->addAction(m_SaveAction);
-	connect(m_SaveAction, &QAction::triggered, this, &QVtkFigure::Save);
-
-	// close window menu entry + action
-	m_CloseAction = new QAction("&Close Window", m_MainWindow);
-	m_CloseAction->setShortcuts(QKeySequence::Close);
-	m_CloseAction->setStatusTip("Close Window");
-
-	m_FileMenu->addAction(m_CloseAction);
-	connect(m_CloseAction, &QAction::triggered, this, &QVtkFigure::Close);
-
-	// Prop menu
-
-	m_PropMenu = m_MainWindow->menuBar()->addMenu("Prop");
-
+	//this->_renderer->Render();
+	this->m_QVtkWidget->update();
+	//this->vtkWidget->GetRenderWindow()->Render();
 }
 
+void QVtkFigure::Show()
+{
+	this->m_MainWindow->show();
+}
 
 void QVtkFigure::Save()
 {
@@ -120,8 +95,8 @@ void QVtkFigure::Save()
 
 	// no file was selected, user clicked "cancel": return without doing anything
 	if (saveFile.length() == 0) {
-		Debug("cancel @ QVtkFigure::Save()");
-		return;
+	Debug("cancel @ QVtkFigure::Save()");
+	return;
 	}
 
 	vtkSmartPointer<vtkWindowToImageFilter> imageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
@@ -130,16 +105,16 @@ void QVtkFigure::Save()
 	vtkSmartPointer<vtkImageWriter> imageWriter;
 	if (selectedFilter == "PNG Image (*.png)")
 	{
-		imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
+	imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
 	}
 	else if (selectedFilter == "JPEG Image (*.jpg)")
 	{
-		imageWriter = vtkSmartPointer<vtkJPEGWriter>::New();
+	imageWriter = vtkSmartPointer<vtkJPEGWriter>::New();
 	}
 	else
 	{
-		//Default to PNG writer
-		imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
+	//Default to PNG writer
+	imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
 	}
 
 	imageWriter->SetInputData(imageFilter->GetOutput());
@@ -149,26 +124,10 @@ void QVtkFigure::Save()
 	*/
 }
 
-
-void QVtkFigure::Refresh()
-{
-
-	//this->_renderer->Render();
-	this->m_QVtkWidget->update();
-	//this->vtkWidget->GetRenderWindow()->Render();
-}
-
-void QVtkFigure::Show()
-{
-	m_MainWindow->show();
-}
-
-
 void QVtkFigure::Close()
 {
-	qDebug("closing window");
-
-	m_MainWindow->close();
+	// inform Taskhandler.m_FigureRecord to delete this figure
+	emit(QVtkFigureClosed());
 }
 
 
@@ -177,15 +136,18 @@ void QVtkFigure::SetTitle(QString Title)
 	m_MainWindow->setWindowTitle(Title);
 }
 
+
 vtkRenderWindow* QVtkFigure::GetRenderWindow()
 {
-	return this->m_QVtkWidget->GetRenderWindow();
+	return m_QVtkWidget->GetRenderWindow();
 }
+
 
 vtkRenderer* QVtkFigure::GetRenderer()
 {
-	return this->m_Renderer;
+	return m_Renderer;
 }
+
 
 quint64 QVtkFigure::GeneratePropHandle()
 {
@@ -206,6 +168,7 @@ quint64 QVtkFigure::GeneratePropHandle()
 	return (quint64)EndTime;
 }
 
+
 void QVtkFigure::AddProp(PropInfomration PropInfo)
 {
 	bool IsFirst = false;
@@ -217,13 +180,13 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 	auto it = m_PropRecord.find(PropInfo.Handle);
 	if (it == m_PropRecord.end())
 	{
-		m_PropRecord[PropInfo.Handle] = PropInfo;
-
 		QString tempText = "<" + PropInfo.Name+ ">";
 
-		m_PropMenu->addMenu(tempText);
+		m_PropRecord[PropInfo.Handle] = PropInfo;
 
 		this->m_Renderer->AddViewProp(PropInfo.Prop);
+
+		m_MainWindow->AddPropMenu(this, &PropInfo);
 
 		// when adding first component: automatically reset view
 		if (IsFirst)
@@ -237,29 +200,54 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 }
 
 
-void QVtkFigure::RemoveProp(unsigned long long PropHandle)
+void QVtkFigure::RemoveProp(quint64 PropHandle)
 {
-	/*
-	auto it = m_PropRecord.find(Prop);
+	auto it = m_PropRecord.find(PropHandle);
 	if (it != m_PropRecord.end())
 	{
-		// remove menu entry
+		auto PropInfo = it->second;
 
-		QAction *tempAction = m_PropMenu->menuAction();
-		mainMenu->removeAction(menuIdontLike);
+		m_MainWindow->RemovePropMenu(&PropInfo);
 
-		comp->removeMenu(this->window);
+		m_Renderer->RemoveViewProp(PropInfo.Prop);
 
-		m_Renderer->RemoveViewProp(Prop);
+		PropInfo.DataSource->Delete();
 
-		m_PropRecord.erase(Prop);
+		m_PropRecord.erase(it);
 
-		this->refresh();
+		this->Refresh();
 	}
-	*/
+}
+
+
+void QVtkFigure::ChangePropVisibility()
+{
+	auto Visibility = dynamic_cast<QAction*>(QObject::sender());
+	if (Visibility == nullptr)
+	{
+		return;
+	}
+
+	quint64 PropHandle = Visibility->data().toULongLong();
+
+	auto it = m_PropRecord.find(PropHandle);
+	if (it != m_PropRecord.end())
+	{
+		auto PropInfo = it->second;
+
+		auto status = PropInfo.Prop->GetVisibility();
+		if (status == 1)
+			PropInfo.Prop->SetVisibility(0);
+		else
+			PropInfo.Prop->SetVisibility(1);
+
+		this->Refresh();
+	}
+
 }
 
 //===================================== Plot Point ==============================================================
+
 quint64 QVtkFigure::PlotPoint(vtkPoints* points)
 {
 	auto Prop = this->CreatePointProp(points);
@@ -271,6 +259,8 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* points)
 	PropInfo.Handle = this->GeneratePropHandle();
 
 	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = points;
 
 	this->AddProp(PropInfo);
 

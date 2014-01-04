@@ -36,7 +36,7 @@ void LocalTaskServer::test()
 
 	qDebug() << "test QVtkFigure";
 
-	auto Figure = new QVtkFigure;
+	auto Figure = new QVtkFigure(0);
 
 	Figure->Show();
 
@@ -102,16 +102,13 @@ void LocalTaskServer::HandleNewConnection()
 			auto Task = TaskList.at(i);
 
 			auto IsSucess = m_TaskHandler->RunTask(Task);
+
 			if (IsSucess == false)
-			{
 				qDebug("Can not run the task");
-				this->HandleFailedTask(Task);
-			}
 			else
-			{
 				qDebug("The task is sucessfully completed");
-				this->HandleCompletedTask(Task);
-			}
+
+			this->AddProcessedTask(Task);
 		}
 		// close the connection
 		socket->close();
@@ -126,9 +123,7 @@ bool LocalTaskServer::InitializeTaskFolders()
 
 	dir.mkdir("PendingTasks");
 
-	dir.mkdir("CompletedTasks");
-
-	dir.mkdir("FailedTasks");
+	dir.mkdir("ProcessedTasks");
 
 	dir.mkdir("ExampleTasks");
 
@@ -169,7 +164,7 @@ std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
 }
 
 
-bool LocalTaskServer::HandleCompletedTask(TaskInformation Task)
+bool LocalTaskServer::AddProcessedTask(TaskInformation Task)
 {
 	// move *.json to "M:/CompletedTasks"
 	// delete Task folder
@@ -228,64 +223,4 @@ bool LocalTaskServer::HandleCompletedTask(TaskInformation Task)
 	TaskDir.removeRecursively();
 
 	return result;
-}
-
-
-bool LocalTaskServer::HandleFailedTask(TaskInformation Task)
-{
-	// move *.json to "M:/FailedTasks"
-	// delete Task folder
-
-	QDir TaskDir(Task.Path + Task.FolderName);
-	if (TaskDir.exists() == false)
-	{
-		qDebug() << "Strange: TaskDir does not exist";
-		qDebug() << "Task.Path:" << Task.Path;
-		qDebug() << "Task.FolderName:" << Task.FolderName;
-		return false;
-	}
-
-	QString FailedTaskPath = "M:/FailedTasks/";
-
-	QDir FailedTaskDir(FailedTaskPath + Task.FolderName);
-	if (FailedTaskDir.exists() == true)
-	{
-		qDebug() << "Strange: FailedTaskDir exists before HandleFailedTask";
-		FailedTaskDir.removeRecursively();
-	}
-
-	auto Isthere = FailedTaskDir.mkpath(FailedTaskPath + Task.FolderName);
-
-	if (Isthere == false)
-	{
-		qWarning() << "Fail to create FailedTaskDir:" << FailedTaskPath + Task.FolderName;
-		// must delete failed task from "M:/pendingtasks/" 
-		TaskDir.removeRecursively();
-		return false;
-	}
-
-	TaskDir.setFilter(QDir::Files);
-	QStringList name;
-	name << "*.json";
-	TaskDir.setNameFilters(name);
-	auto list = TaskDir.entryList();
-
-	bool result = true;
-	for (int i = 0; i < list.size(); ++i)
-	{
-		auto sourceFileName = list.at(i);
-		auto sourceFile = Task.Path + Task.FolderName + "/" + sourceFileName;
-		auto destinationFile = FailedTaskPath + Task.FolderName + "/" + sourceFileName;
-		auto tempresult = QFile::copy(sourceFile, destinationFile);
-
-		if (tempresult == false)
-		{
-			result = false;
-		}
-	}
-
-	TaskDir.removeRecursively();
-
-	return result;
-
 }

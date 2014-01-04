@@ -1,6 +1,7 @@
 #ifndef TaskHandler_h
 #define TaskHandler_h
 
+#include <qobject.h>
 #include <qstring.h>
 #include <QStringList>
 #include <qmap.h>
@@ -18,11 +19,11 @@
 class TaskInformation
 {
 public:
-	// M:/PendingTasks/1234567890/Task.json
+	// M:/PendingTasks/abcd1234567890/Task.json
 	QString Path;         // M:/PendingTasks/
-	QString FolderName;   // 1234567890  is the handle of the task
+	QString FolderName;   // abcd1234567890  is the handle of the task
 private:
-	QString FileName;     // Task.json 
+	QString FileName;     // Task.json   the name is fixed for every task
 
 public:
 	TaskInformation()
@@ -34,17 +35,17 @@ public:
 	{
 	}
 
-	QString GetFileName()
+	QString GetFileName() const
 	{
 		return  FileName;
 	}
 
-	QString GetFullFileNameAndPath()
+	QString GetFullFileNameAndPath() const
 	{
 		return Path + FolderName + "/" + FileName;
 	}
 
-	QString GetFullPath()
+	QString GetFullPath() const
 	{
 		return Path + FolderName + "/";
 	}
@@ -92,15 +93,17 @@ typedef enum
 } VtkDataTypeEnum;
 
 
-class TaskHandler
+class TaskHandler : public QObject
 {
+	Q_OBJECT;
+
 private:
 
 	QStringList m_MatlabCommandList;
 
 	MatlabDataTypeList m_MatlabDataTypeList;
 
-	QMap<QString, std::function<bool(TaskHandler*, TaskInformation)>> m_MatlabCommandTranslator;
+	QMap<QString, std::function<bool(TaskHandler*, const TaskInformation&)>> m_MatlabCommandTranslator;
 
 	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord;
 
@@ -108,14 +111,15 @@ public:
 	TaskHandler();
 	~TaskHandler();
 
-	void CreateMatlabCommandList();
-
 	void CreateMatlabCommandTranslator();
 
-	bool RunTask(TaskInformation);
+	bool RunTask(const TaskInformation&);
 
-	void WriteExampleTaskFile(TaskInformation);
-	void ReadExampleTaskFile(TaskInformation);
+	void WriteExampleTaskFile(const TaskInformation&);
+	void ReadExampleTaskFile(const TaskInformation&);
+
+public slots:
+    void CloseQVtkFigure();
 
 private:	
 	//----------------------- read data file -------------------//
@@ -127,18 +131,20 @@ private:
 	//----------------------------------------------------------//
 
 	//----------------------- process matlab command -------------------//
-	bool run_vtkfigure(TaskInformation);
+	bool run_vtkfigure(const TaskInformation&);
 
-	bool run_vtkplotpoint(TaskInformation);
+	bool run_vtkplotpoint(const TaskInformation&);
 
-	bool run_vtkshowimage(TaskInformation);
+	bool run_vtkshowimage(const TaskInformation&);
 
-	bool run_vtkshowmesh(TaskInformation);
+	bool run_vtkshowmesh(const TaskInformation&);
 	//---------------------------------------
-	bool run_vtkdeleteprop(TaskInformation);
+	bool run_vtkdeleteprop(const TaskInformation&);
 
 	//----------------------------------------------------------//
 	
+	bool WriteTaskFailureInfo(const TaskInformation&, QString, QString);
+
 	quint64 GenerateFigureHandle();
 
 	VtkDataTypeEnum MapMatlabDataTypeToVtkDataType(QString);

@@ -8,8 +8,9 @@ Taskhandle=['vtkfigure' num2str(uint64(100000*rand))];
 
 ResultFileName='Result.json';
 
-Task={{'Command', 'vtkfigure'}, {'ResultFileName', ResultFileName}};
-  
+Task.Text={{'Command', 'vtkfigure'}, {'ResultFileName', ResultFileName}};
+Task.Data={};
+
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0
     return
@@ -20,7 +21,7 @@ if IsInformed == 0
     return
 end
 %%
-Status=Client.CheckTaskStatus(Taskhandle);
+Status=Client.WaitForResult(Taskhandle);
 if Status == 0
     return
 end

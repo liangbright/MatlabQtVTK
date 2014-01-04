@@ -2,17 +2,16 @@
 #define QVtkFigure_h
 
 #include <qobject.h>
-#include <qmainwindow.h>
-#include <qmenu.h>
 #include <qstring.h>
 
 #include <vtkProp.h>
 #include <vtkPolyData.h>
-
 #include <QVTKWidget.h>
 
 #include <ctime>
 #include <unordered_map>
+
+#include "QVtkFigureMainWindow.h"
 
 class PropInfomration
 {
@@ -20,45 +19,50 @@ public:
 
 	quint64  Handle = 0; //handle of the Prop
 
-	vtkDataObject* DataSource;
+	QString Name; //default is ""
+
+	vtkObject* DataSource = nullptr;
 
 	vtkProp* Prop = nullptr;
 
-	QString Name = "";
-
-	QAction* MenuAction = nullptr;
+	QMenu* PropMenu = nullptr;
 };
+
 
 class QVtkFigure : public QObject
 {	
 	Q_OBJECT;
 
 private:
-	QMainWindow *m_MainWindow = nullptr;
 
-	QVTKWidget *m_QVtkWidget = nullptr;
+	quint64 m_Handle = 0;
 
-	vtkRenderer *m_Renderer = nullptr;
+	QVtkFigureMainWindow* m_MainWindow = nullptr;
 
-	QMenu *m_FileMenu = nullptr;
-	QMenu *m_PropMenu = nullptr;
+	QVTKWidget* m_QVtkWidget = nullptr;
 
-	QAction *m_CloseAction = nullptr;
-	QAction *m_SaveAction = nullptr;
+	vtkRenderer* m_Renderer = nullptr;
 
 	std::unordered_map<quint64, PropInfomration> m_PropRecord;
 
 public:
-	QVtkFigure();
+	QVtkFigure(quint64);
 	~QVtkFigure();
+
+	void closeEvent(QCloseEvent*);
+
+	quint64 GetHandle() 
+	{
+		return m_Handle;
+	}
 
 	void CreateMenus();
 
-	void SetTitle(QString Title);
+	void SetTitle(QString);
 
-	void AddProp(PropInfomration PropInfo);
+	void AddProp(PropInfomration);
 
-	void RemoveProp(unsigned long long);
+	void RemoveProp(quint64);
 
 	quint64 GeneratePropHandle();
 
@@ -75,13 +79,15 @@ public:
 	vtkRenderer* GetRenderer();
 
 signals:
-	void QVtkFigureDeleted();
+	void QVtkFigureClosed();
 
 public slots:
 
-	void Close();
+    void ChangePropVisibility();
 
-	void Show();
+    void Show();
+	
+	void Close();
 
 	void Save();
 

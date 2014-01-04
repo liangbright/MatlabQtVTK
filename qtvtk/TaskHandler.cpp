@@ -50,7 +50,59 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	
 }
 
-bool TaskHandler::run_vtkfigure(TaskInformation Task)
+void TaskHandler::CloseQVtkFigure()
+{
+	auto Figure = dynamic_cast<QVtkFigure*>(QObject::sender());
+	if (Figure == nullptr)
+	{
+		return;
+	}
+
+	auto FigureHandle = Figure->GetHandle();
+
+	auto it = m_FigureRecord.find(FigureHandle);
+	if (it != m_FigureRecord.end())
+	{
+		it->second.release()->deleteLater();
+		m_FigureRecord.erase(it);
+	}
+}
+
+
+bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& Task, QString ResultFileName, QString FailureInfo)
+{
+	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
+
+	QFile ResultFile(tempName);
+
+	if (!ResultFile.open(QIODevice::WriteOnly))
+	{
+		qWarning("Couldn't open file to save result");
+		return false;
+	}
+
+	QJsonObject ResultObject;
+
+	ResultObject["IsSuccess"] = QString("no");
+
+	ResultObject["FigureHandle"] = QString("");
+
+	ResultObject["PropHandle"] = QString("");
+
+	ResultObject["FailureInfo"] = FailureInfo;
+
+	QJsonDocument ResultDoc(ResultObject);
+
+	ResultFile.write(ResultDoc.toJson());
+	ResultFile.close();
+
+	ResultFile.rename(Task.Path + Task.FolderName + "/" + ResultFileName);
+
+	return true;
+}
+
+
+bool TaskHandler::run_vtkfigure(const TaskInformation& Task)
 {
 	qDebug() << "run_vtkfigure";
 
@@ -80,12 +132,13 @@ bool TaskHandler::run_vtkfigure(TaskInformation Task)
 	}
 
 	// new figure --------------------------------------------------------------//
+	auto FigureHandle = this->GenerateFigureHandle();
 
-	auto Figure = std::unique_ptr<QVtkFigure>(new QVtkFigure);
+	auto Figure = std::unique_ptr<QVtkFigure>(new QVtkFigure(FigureHandle));
+
+	connect(Figure.get(), &QVtkFigure::QVtkFigureClosed, this, &TaskHandler::CloseQVtkFigure);
 
 	Figure->Show();
-
-	auto FigureHandle = this->GenerateFigureHandle();
 
 	m_FigureRecord[FigureHandle] = std::move(Figure);
 	//---------------------- Write Result ----------------------------------------//
@@ -106,7 +159,7 @@ bool TaskHandler::run_vtkfigure(TaskInformation Task)
 
 	ResultObject["FigureHandle"] = QString::number(FigureHandle);
 
-	ResultObject["PropHandle"] = QString::number(0);
+	ResultObject["PropHandle"] = QString("");
 
 	QJsonDocument ResultDoc(ResultObject);
 
@@ -119,7 +172,7 @@ bool TaskHandler::run_vtkfigure(TaskInformation Task)
 }
 
 
-bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
+bool TaskHandler::run_vtkplotpoint(const TaskInformation& Task)
 {
 	qDebug() << "run_vtkplotpoint";
 
@@ -136,17 +189,30 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	QJsonObject TaskObject = TaskDoc.object();
 
 	//-------------------- Read some Information from Task.json ----------------------------------//
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
 
 	//get FigureHandle
 	quint64 FigureHandle = 0; // invalid handle
-	auto it = TaskObject.find("FigureHandle");
+	it = TaskObject.find("FigureHandle");
 	if (it != TaskObject.end())
 	{
 		FigureHandle = it.value().toString().toULongLong();
 	}
 	else
 	{
-		qWarning("FigureHandle is unknown");
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -158,13 +224,17 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 		Figure=it_Fig->second.get();
 		if (Figure == nullptr)
 		{
-			qWarning("FigureHandle is null in m_FigureRecord");
+			QString FailureInfo = "FigureHandle is null in m_FigureRecord";			
+			TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+			qWarning() << FailureInfo;
 			return false;
 		}
 	}
 	else
 	{
-		qWarning("FigureHandle is invalid");
+		QString FailureInfo = "FigureHandle is invalid";		
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -177,7 +247,9 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	}
 	else
 	{
-		qWarning("PointNum is unknown");
+		QString FailureInfo = "PointNum is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -188,7 +260,9 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	{ DataType = it.value().toString();}
 	else
 	{
-		qWarning("PointDataType is unknown");
+		QString FailureInfo = "PointDataType is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 	
@@ -235,28 +309,20 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 	}
 	else
 	{
-		qWarning("PointDataFileName is unknown");
+		QString FailureInfo = "PointDataFileName is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
-
-	QString ResultFileName;
-	it = TaskObject.find("ResultFileName");
-	if (it != TaskObject.end())
-	{
-		ResultFileName = it.value().toString();
-	}
-	else
-	{
-		qWarning("ResultFileName is unknown");
-		return false;
-	}
-
+	
 	//--------------------- Get the data ---------------------------------------//
 	auto Point = ReadPointData(DataFileFullNameAndPath, PointNum, DataType);
 
 	if (Point == nullptr)
 	{
-		qWarning("Point Data is not loaded");
+		QString FailureInfo = "Point Data is not loaded";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -293,7 +359,7 @@ bool TaskHandler::run_vtkplotpoint(TaskInformation Task)
 }
 
 
-bool TaskHandler::run_vtkshowimage(TaskInformation Task)
+bool TaskHandler::run_vtkshowimage(const TaskInformation& Task)
 {
 	QFile TaskFile(Task.GetFullFileNameAndPath());
 
@@ -308,15 +374,29 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 	QJsonObject TaskObject = TaskDoc.object();
 
 	//-------------------- Read some Information from Task.json ----------------------------------//
+	// get ResultFileName
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
 
 	//get FigureHandle
 	quint64 FigureHandle = 0; // invalid handle
-	auto it = TaskObject.find("FigureHandle");
+	it = TaskObject.find("FigureHandle");
 	if (it != TaskObject.end())
 	{ FigureHandle = it.value().toString().toULongLong();}
 	else
 	{
-		qWarning("FigureHandle is unknown");
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -328,13 +408,17 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 		Figure = it_Fig->second.get();
 		if (Figure == nullptr)
 		{
-			qWarning("FigureHandle is null in m_FigureRecord");
+			QString FailureInfo = "Figure is invalid";
+			TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+			qWarning() << FailureInfo;
 			return false;
 		}
 	}
 	else
 	{
-		qWarning("FigureHandle is invalid");
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -368,7 +452,9 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 
 	if (IsImageSizeOK == false)
 	{
-		qWarning("ImageSize is invalid");
+		QString FailureInfo = "ImageSize is invalid";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -402,7 +488,9 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 
 	if (IsOriginOK == false)
 	{
-		qWarning("Origin is invalid");
+		QString FailureInfo = "Origin is invalid";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -413,7 +501,9 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 	{ DataType = it.value().toString();}
 	else
 	{
-		qWarning("DataType is unknown");
+		QString FailureInfo = "DataType is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -426,18 +516,9 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 	}
 	else
 	{
-		qWarning("ImageDataFileName is unknown");
-		return false;
-	}
-
-	// get ResultFileName
-	QString ResultFileFullName;
-	it = TaskObject.find("ResultFileName");
-	if (it != TaskObject.end())
-	{ ResultFileFullName = it.value().toString() + ".json";}
-	else
-	{
-		qWarning("ResultFileName is unknown");
+		QString FailureInfo = "ImageDataFileName is unknown";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 
@@ -445,14 +526,16 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 	auto ImageData = ReadImageData(DataFileFullNameAndPath, ImageSize, DataType);
 	if (ImageData == nullptr)
 	{
-		qWarning("ImageData is not available");
+		QString FailureInfo = "ImageData is not loaded";
+		TaskHandler::WriteTaskFailureInfo(Task, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
 	//---------------------- Show Image ----------------------------------------//
 	auto PropHandle = Figure->ShowImage(ImageData);
 
 	//---------------------- Write Result ----------------------------------------//
-	QString tempName = Task.Path + Task.FolderName + "/~temp.json";
+	QString tempName = Task.Path + Task.FolderName + "/~" + ResultFileName;
 	QFile ResultFile(tempName);
 
 	if (!ResultFile.open(QIODevice::WriteOnly))
@@ -473,20 +556,20 @@ bool TaskHandler::run_vtkshowimage(TaskInformation Task)
 
 	ResultFile.write(ResultDoc.toJson());
 
-	ResultFile.rename(ResultFileFullName);
+	ResultFile.rename(ResultFileName);
 
 	//-----------------------------Done---------------------------------------------------//
 	return true;
 }
 
 
-bool TaskHandler::run_vtkshowmesh(TaskInformation Task)
+bool TaskHandler::run_vtkshowmesh(const TaskInformation& Task)
 {
 	return true;
 }
 
 
-bool TaskHandler::run_vtkdeleteprop(TaskInformation Task)
+bool TaskHandler::run_vtkdeleteprop(const TaskInformation& Task)
 {
 
 	//-----------------------------Done---------------------------------------------------//
@@ -494,7 +577,7 @@ bool TaskHandler::run_vtkdeleteprop(TaskInformation Task)
 }
 
 
-bool TaskHandler::RunTask(TaskInformation Task)
+bool TaskHandler::RunTask(const TaskInformation& Task)
 {	
 	QFile TaskFile(Task.GetFullFileNameAndPath());
 
@@ -534,14 +617,12 @@ bool TaskHandler::RunTask(TaskInformation Task)
 		auto function = it2.value();
 		return function(this, Task);
 	}
-	else
-	{
-		return false;
-	}
 
+	return false;
 }
 
-void TaskHandler::WriteExampleTaskFile(TaskInformation Task)
+
+void TaskHandler::WriteExampleTaskFile(const TaskInformation& Task)
 {
 	QFile TaskFile(Task.GetFullFileNameAndPath());
 
@@ -569,7 +650,7 @@ void TaskHandler::WriteExampleTaskFile(TaskInformation Task)
 }
 
 
-void TaskHandler::ReadExampleTaskFile(TaskInformation Task)
+void TaskHandler::ReadExampleTaskFile(const TaskInformation& Task)
 {
 	QFile TaskFile(Task.GetFullFileNameAndPath());
 
@@ -631,11 +712,11 @@ vtkPoints* TaskHandler::ReadPointData(QString DataFileFullNameAndPath, quint64 P
 
 	if (MatlabDataType == m_MatlabDataTypeList.Double)
 	{
-		BypesofPointData = qint64(PointNum * 8);
+		BypesofPointData = qint64(PointNum*3*8); // 3d point
 	}
 	else if (MatlabDataType == m_MatlabDataTypeList.Single)
 	{
-		BypesofPointData = qint64(PointNum * 4);
+		BypesofPointData = qint64(PointNum*3*4);
 	}
 	else
 	{

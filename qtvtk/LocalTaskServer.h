@@ -43,9 +43,7 @@ private:
 
 	std::vector<TaskInformation> GetAllPendingTasks();
 
-	bool HandleFailedTask(TaskInformation);
-
-	bool HandleCompletedTask(TaskInformation);
+	bool AddProcessedTask(TaskInformation);
 };
 
 #endif
