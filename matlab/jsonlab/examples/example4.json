@@ -12,7 +12,7 @@
   [
     {
         "_ArrayType_" : "double",
-        "_ArraySize_" : [1,2],
+        "_ArraySize_" : [1, 2 ],
         "_ArrayData_" : [1,0]
     },
     {

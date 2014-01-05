@@ -5,23 +5,28 @@ Client = MatlabClientClass;
 %%
 Taskhandle=['vtkplotpoint' num2str(uint64(100000*rand))];
 
+Command='vtkplotpoint';
+
 ResultFileName='Result.json';
 
-[~, PointNum]=size(Point);
+[~, Num]=size(Point);
 
-PointColor_R=num2str(Color(1));
-PointColor_G=num2str(Color(2));
-PointColor_B=num2str(Color(3));
+PointNum=num2str(Num, '%d');
 
-Task.Text={{'Command', 'vtkplotpoint'}, ...
+PointColor=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
+
+PointDataFileName='PointData.data';
+PointDataType=double;
+
+Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
-           {'PointNum', num2str(uint64(PointNum))}, ...
-           {'PointColor_R', PointColor_R},  {'PointColor_G', PointColor_G}, {'PointColor_B', PointColor_B}, ...      
-           {'PointDataFileName', 'PointData.data'}, ...
-           {'PointDataType', 'double'},...
+           {'PointNum', PointNum}, ...
+           {'PointColor', PointColor}, ...      
+           {'PointDataFileName', PointDataFileName}, ...
+           {'PointDataType', PointDataType},...
            {'ResultFileName', ResultFileName}};
        
-Task.Data={{'PointData.data', 'double', Point}};
+Task.Data={{PointDataFileName, PointDataType, Point}};
 
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0

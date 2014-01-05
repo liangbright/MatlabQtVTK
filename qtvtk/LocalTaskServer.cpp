@@ -20,6 +20,28 @@ LocalTaskServer::LocalTaskServer()
 
 void LocalTaskServer::test()
 {
+	qDebug() << "test QString split to number";
+
+	QString Color("1.2 , 2.31, 0.11 ,9");
+
+	auto ColorValue = Color.split(",");
+
+	auto a1 = ColorValue.at(0).toDouble();
+	if (a1 == 1.2)
+		qDebug() << ColorValue.at(0).toDouble();
+
+	auto a2 = ColorValue.at(1).toDouble();
+	if (a2 == 2.31)
+		qDebug() << ColorValue.at(1).toDouble();
+
+	auto a3 = ColorValue.at(2).toDouble();
+	if (a3 == 0.11)
+		qDebug() << ColorValue.at(2).toDouble();
+
+	auto a4 = ColorValue.at(3).toDouble();
+	if (a4 == 9)
+		qDebug() << ColorValue.at(3).toDouble();
+
 	qDebug() << "test example task read and write";
 
 	TaskInformation Task;

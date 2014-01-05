@@ -1,4 +1,4 @@
-function handle = vtkfigure()
+function [handle, Result] = vtkfigure()
 %%
 handle=[];
 

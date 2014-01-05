@@ -92,7 +92,7 @@ for n=1:ElementNum
         end
         fprintf(fid, TextLine);        
     else
-        disp('Wrong Element @CellToJson')
+        disp('Wrong Element @WriteTask')
         fclose(fid);
         return
     end
@@ -133,7 +133,7 @@ t1=clock;
 
 while 1
     
-    listing = dir(['M:/CompletedTasks/' Taskhandle] );
+    listing = dir(['M:/ProcessedTasks/' Taskhandle] );
     if ~isempty(listing)
         Status=1;
         return
@@ -165,7 +165,7 @@ function Result=ReadResult(this, Taskhandle, FileName)
 % Result.PropHandle
 %%
 
-Name=['M:/CompletedTasks/' Taskhandle '/' FileName];
+Name=['M:/ProcessedTasks/' Taskhandle '/' FileName];
 Result = loadjson(Name);
 
 end
