@@ -116,8 +116,6 @@ public:
 	TaskHandler();
 	~TaskHandler();
 
-	void CreateMatlabCommandTranslator();
-
 	bool RunTask(const TaskInformation& TaskInfo);
 
 	void WriteExampleTaskFile(const TaskInformation& TaskInfo);
@@ -127,6 +125,11 @@ public slots:
     void CloseQVtkFigure();
 
 private:	
+
+	void CreateMatlabCommandTranslator();
+
+	QVtkFigure* GetQVtkFigurePointer(quint64 FigureHandle);
+
 	//----------------------- process matlab command -------------------//
 
 	bool run_vtkfigure(const TaskInformation& TaskInfo);

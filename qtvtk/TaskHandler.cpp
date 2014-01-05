@@ -74,6 +74,20 @@ void TaskHandler::CloseQVtkFigure()
 }
 
 
+QVtkFigure* TaskHandler::GetQVtkFigurePointer(quint64 FigureHandle)
+{
+	QVtkFigure* Figure = nullptr;
+
+    auto it = m_FigureRecord.find(FigureHandle);
+    if (it != m_FigureRecord.end())
+    {
+	    Figure = it->second.get();
+	}
+
+	return Figure;
+}
+
+
 bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo)
 {
 	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
@@ -267,20 +281,8 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 	}
 
 	//check FigureHandle
-	QVtkFigure* Figure = nullptr;
-	auto it_Fig = m_FigureRecord.find(FigureHandle);
-	if (it_Fig != m_FigureRecord.end())
-	{
-		Figure=it_Fig->second.get();
-		if (Figure == nullptr)
-		{
-			QString FailureInfo = "FigureHandle is null in m_FigureRecord";			
-			TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
-			qWarning() << FailureInfo;
-			return false;
-		}
-	}
-	else
+	auto Figure = this->GetQVtkFigurePointer(FigureHandle);
+	if (Figure == nullptr)
 	{
 		QString FailureInfo = "FigureHandle is invalid";		
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
@@ -471,20 +473,8 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 	}
 
 	//check FigureHandle ----------------------------------------------------------
-	QVtkFigure* Figure = nullptr;
-	auto it_Fig = m_FigureRecord.find(FigureHandle);
-	if (it_Fig != m_FigureRecord.end())
-	{
-		Figure = it_Fig->second.get();
-		if (Figure == nullptr)
-		{
-			QString FailureInfo = "Figure is invalid";
-			TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
-			qWarning() << FailureInfo;
-			return false;
-		}
-	}
-	else
+	auto Figure = this->GetQVtkFigurePointer(FigureHandle);
+	if (Figure == nullptr)
 	{
 		QString FailureInfo = "FigureHandle is invalid";
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
