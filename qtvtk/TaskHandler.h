@@ -126,9 +126,11 @@ public slots:
 
 private:	
 
+	void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle);
+
 	void CreateMatlabCommandTranslator();
 
-	QVtkFigure* GetQVtkFigurePointer(quint64 FigureHandle);
+	QVtkFigure* GetQVtkFigure(quint64 FigureHandle);
 
 	//----------------------- process matlab command -------------------//
 

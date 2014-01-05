@@ -62,6 +62,8 @@ QVtkFigure::QVtkFigure(quint64 Handle)
 	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::Close);
 
 	m_time.start();
+
+	this->Show();
 }
 
 QVtkFigure::~QVtkFigure()

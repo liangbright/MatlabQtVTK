@@ -55,6 +55,26 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	
 }
 
+
+void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle)
+{
+	*Figure = nullptr;
+	*FigureHandle = 0;
+
+	auto Handle = this->GenerateFigureHandle();
+
+	auto Figure_upt = std::unique_ptr<QVtkFigure>(new QVtkFigure(Handle));
+
+	connect(Figure_upt.get(), &QVtkFigure::QVtkFigureClosed, this, &TaskHandler::CloseQVtkFigure);
+
+	*FigureHandle = Handle;
+
+	*Figure=Figure_upt.get();
+
+	m_FigureRecord[Handle] = std::move(Figure_upt);
+}
+
+
 void TaskHandler::CloseQVtkFigure()
 {
 	auto Figure = dynamic_cast<QVtkFigure*>(QObject::sender());
@@ -74,7 +94,7 @@ void TaskHandler::CloseQVtkFigure()
 }
 
 
-QVtkFigure* TaskHandler::GetQVtkFigurePointer(quint64 FigureHandle)
+QVtkFigure* TaskHandler::GetQVtkFigure(quint64 FigureHandle)
 {
 	QVtkFigure* Figure = nullptr;
 
@@ -178,15 +198,9 @@ bool TaskHandler::run_vtkfigure(const TaskInformation& TaskInfo)
 	}
 
 	// new figure --------------------------------------------------------------//
-	auto FigureHandle = this->GenerateFigureHandle();
-
-	auto Figure = std::unique_ptr<QVtkFigure>(new QVtkFigure(FigureHandle));
-
-	connect(Figure.get(), &QVtkFigure::QVtkFigureClosed, this, &TaskHandler::CloseQVtkFigure);
-
-	Figure->Show();
-
-	m_FigureRecord[FigureHandle] = std::move(Figure);
+	QVtkFigure* Figure;
+	quint64  FigureHandle;
+	TaskHandler::CreateQVtkFigure(&Figure, &FigureHandle);
 	//---------------------- Write Result ----------------------------------------//
 	/*
 	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
@@ -281,7 +295,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 	}
 
 	//check FigureHandle
-	auto Figure = this->GetQVtkFigurePointer(FigureHandle);
+	auto Figure = this->GetQVtkFigure(FigureHandle);
 	if (Figure == nullptr)
 	{
 		QString FailureInfo = "FigureHandle is invalid";		
@@ -473,7 +487,7 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 	}
 
 	//check FigureHandle ----------------------------------------------------------
-	auto Figure = this->GetQVtkFigurePointer(FigureHandle);
+	auto Figure = this->GetQVtkFigure(FigureHandle);
 	if (Figure == nullptr)
 	{
 		QString FailureInfo = "FigureHandle is invalid";
