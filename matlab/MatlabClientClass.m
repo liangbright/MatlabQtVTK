@@ -61,66 +61,18 @@ function IsSucess = WriteTask(this, Taskhandle, Task)
 FilePath=['M:\PendingTasks\' Taskhandle '\'];
 mkdir(FilePath)
 %--------------------------------------------------------------
-FileName=[FilePath 'Task.json'];
-
-IsSucess=0;
-
+FullFileName=[FilePath 'Task.json'];
 fclose('all');
-
-fid = fopen(FileName, 'w');
-if fid == -1
-    disp('can not open task file')
+IsSucess1 = WriteTaskText(Task.Text, FullFileName);
+if IsSucess1 == 0
     return
 end
-
-fprintf(fid, '{\n');
-
-Prefix='    ';
-
-TaskText=Task.Text;
-
-ElementNum=length(TaskText);
-
-for n=1:ElementNum
-    Element = TaskText{n};
-    [~, L]=size(Element);
-    if  L == 2      
-        if n < ElementNum
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' ',\n'];
-        else
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\n'];
-        end
-        fprintf(fid, TextLine);        
-    else
-        disp('Wrong Element @WriteTask')
-        fclose(fid);
-        return
-    end
+IsSucess2 = WriteTaskData(Task.Data, FilePath);
+if IsSucess2 == 0
+    return
 end
-
-fprintf(fid, '}\n');
-
-fclose(fid);
 %-------------------------------------------------------
-TaskData=Task.Data;
-
-DataElementNum=length(TaskData);
-
-for n=1:DataElementNum
-    DataElement = TaskData{n};
-    DataFileName=[FilePath DataElement{1}];
-    datafid = fopen(DataFileName, 'w');
-    if datafid == -1
-        disp('can not open data file')
-        fclose(datafid);
-        return
-    end
-    fwrite(datafid, DataElement{3}(:), DataElement{2});
-    fclose(datafid);
-end
-fclose('all');
-
-IsSucess=1;
+IsSucess=2;
 end
 
 function Status=WaitForResult(this, Taskhandle)

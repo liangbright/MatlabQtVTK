@@ -5,7 +5,7 @@ Client = MatlabClientClass;
 %%
 Command='vtkshowvolume';
 
-Taskhandle=['vtkplotvolume' num2str(uint64(100000*rand))];
+Taskhandle=['vtkshowvolume' num2str(uint64(100000*rand))];
 
 ResultFileName='Result.json';
 
@@ -14,7 +14,8 @@ ImageSize=[num2str(int32(Lx), '%d') ',' num2str(int32(Ly), '%d') ',' num2str(int
 
 DataRange=[num2str(min(Volume(:)), '%f') ',' num2str(max(Volume(:)), '%f')];
 
-ImageDataFileName='ImageData.data';
+ImageDataFileName='ImageData.image';
+FileType='image';
 DataType='double';
 
 Task.Text={{'Command', Command}, ...
@@ -25,7 +26,7 @@ Task.Text={{'Command', Command}, ...
            {'DataRange', DataRange},...
            {'ResultFileName', ResultFileName}};
 
-Task.Data={{ImageDataFileName, DataType, Volume}};
+Task.Data={{ImageDataFileName, FileType, DataType, Volume}};
 
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0

@@ -11,11 +11,12 @@ ResultFileName='Result.json';
 
 [~, Num]=size(Point);
 
-PointNum=num2str(Num, '%d');
+PointNum=num2str(int64(Num), '%d');
 
 PointColor=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
 
-PointDataFileName='PointData.data';
+PointDataFileName='PointData.feature';
+FileType='feature';
 DataType='double';
 
 Task.Text={{'Command', Command}, ...
@@ -26,7 +27,7 @@ Task.Text={{'Command', Command}, ...
            {'DataType', DataType},...
            {'ResultFileName', ResultFileName}};
        
-Task.Data={{PointDataFileName, DataType, Point}};
+Task.Data={{PointDataFileName, FileType, DataType, Point}};
 
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0
