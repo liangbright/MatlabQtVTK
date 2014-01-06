@@ -20,9 +20,9 @@ LocalTaskServer::LocalTaskServer()
 
 void LocalTaskServer::test()
 {
-	qDebug() << "test QString split to number";
-
 	QString Color("1.2 , 2.31, 0.11 ,9");
+
+	qDebug() << "test QString split to number" << Color;
 
 	auto ColorValue = Color.split(",");
 

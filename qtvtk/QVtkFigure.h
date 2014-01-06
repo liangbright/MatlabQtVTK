@@ -48,6 +48,8 @@ private:
 
 	std::unordered_map<quint64, PropInfomration> m_PropRecord;
 
+	quint64 m_PropCounter;
+
 	QTime  m_time;
 
 public:
@@ -69,13 +71,16 @@ public:
 
 	quint64 GeneratePropHandle();
 
-	quint64 PlotPoint(vtkPoints* Points);
-	vtkProp* CreatePointProp(vtkPoints* Points);
+	quint64 PlotPoint(vtkPoints* Point);
+	vtkProp* CreatePointProp(vtkPoints* Point);
 
 	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
 	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
 	vtkVolumeProperty* GetDefaultVolumeProperty(double DataRange[2]);
 	QString GetDefaultRenderMethod();
+
+	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color);
+	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData, QString Color);
 
 	vtkRenderWindow* GetRenderWindow();
 

@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <map>
 
 #include "QVtkFigure.h"
 
@@ -112,6 +113,8 @@ private:
 
 	QTime m_time;
 
+	quint64 m_FigureCounter;
+
 public:
 	TaskHandler();
 	~TaskHandler();
@@ -132,6 +135,23 @@ private:
 
 	QVtkFigure* GetQVtkFigure(quint64 FigureHandle);
 
+
+	//------------- Read Data From File ---------------------------------------------//
+
+	bool ReadPointData(QString FullFileName, int PointNum, QString MatlabDataType, vtkPoints*& PointData);
+
+	bool ReadImageData(QString FullFileName, int ImageSize[3], QString DataType, vtkImageData*& ImageData);
+	
+	bool ReadPolyMeshData(QString FullFileName_PointData, int PointNum, \
+		                  QString FullFileName_CellData, int CellNum, \
+		                  vtkPolyData*& PolyData);
+
+	bool ReadPolyMeshPointData(QString FullFileName, int PointNum, \
+		                       vtkPoints*& PointData, std::map<int, int>& PointIndexTable);
+ 
+	bool ReadPolyMeshCellData(QString FullFileName, int CellNum, const std::map<int, int>& PointIndexTable, \
+		                      vtkCellArray*& CellData);
+
 	//----------------------- process matlab command -------------------//
 
 	bool run_vtkfigure(const TaskInformation& TaskInfo);
@@ -139,16 +159,14 @@ private:
 	//---------------------------------------
 
 	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
-	bool ReadPointData(QString DataFileFullNameAndPath, quint64 PointNum, QString MatlabDataType, vtkPoints** PointData);
 	//---------------------------------------
 
 	bool run_vtkshowvolume(const TaskInformation& TaskInfo);
-	bool ReadVolumeData(QString DataFileFullNameAndPath, int VolumeSize[3], QString MatlabDataType, vtkImageData** VolumeData);
+
 	bool ReadVolumeProperty(QJsonObject PropertyObject, vtkVolumeProperty* VolumeProperty);	
 	//---------------------------------------
 
-	bool run_vtkshowmesh(const TaskInformation& TaskInfo);
-	bool ReadMeshData(QString DataFileFullNameAndPath, quint64 ElementNum, QString MatlabDataType, vtkPolyData** PolyData);
+	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);
 	//---------------------------------------
 
 	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);

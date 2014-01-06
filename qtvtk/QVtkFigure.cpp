@@ -8,6 +8,7 @@
 #include <qmessagebox.h>
 #include <qfiledialog.h>
 #include <qdesktopservices.h>
+#include <qDebug>
 
 #include <QVTKWidget.h> 
 #include <vtkRenderer.h> 
@@ -32,7 +33,10 @@
 #include <vtkVolumeTextureMapper3D.h>
 #include <vtkGPUVolumeRayCastMapper.h>
 #include <vtkFixedPointVolumeRayCastMapper.h>
-
+#include <vtkDataSetMapper.h>
+#include <vtkDelaunay3D.h>
+#include <vtkGeometryFilter.h>
+#include <vtkLookupTable.h>
 
 #include "QVtkFigureMainWindow.h"
 #include "QVtkFigure.h"
@@ -62,6 +66,8 @@ QVtkFigure::QVtkFigure(quint64 Handle)
 	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::Close);
 
 	m_time.start();
+
+	m_PropCounter = 0;
 
 	this->Show();
 }
@@ -164,6 +170,11 @@ vtkRenderer* QVtkFigure::GetRenderer()
 
 quint64 QVtkFigure::GeneratePropHandle()
 {
+	m_PropCounter = m_PropCounter + 1;
+
+	return m_PropCounter;
+
+	/*
 	auto StartTime = m_time.elapsed();
 	auto EndTime = StartTime;
 
@@ -178,6 +189,7 @@ quint64 QVtkFigure::GeneratePropHandle()
 	}
 
 	return (quint64)EndTime;
+	*/
 
 	/*  only 1 handler per sec 
 	auto StartTime = std::time(nullptr); // time_t to double -> overflow ?
@@ -282,19 +294,19 @@ void QVtkFigure::ChangePropVisibility()
 // Output
 //   PropInfo.Handle : 0 if something goes wrong; >0 is good
 //---------------------------------------------------------------------------------------
-quint64 QVtkFigure::PlotPoint(vtkPoints* Points)
+quint64 QVtkFigure::PlotPoint(vtkPoints* Point)
 {
-	auto Prop = this->CreatePointProp(Points);
+	auto Prop = this->CreatePointProp(Point);
 
 	PropInfomration PropInfo;
 
-	PropInfo.Name = "Points";
-
 	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Points(" + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = Prop;
 
-	PropInfo.DataSource = Points;
+	PropInfo.DataSource = Point;
 
 	this->AddProp(PropInfo);
 
@@ -302,34 +314,46 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* Points)
 }
 
 
-vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Points)
+vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Point)
 {
-	std::cout << "vtk points: " << Points << std::endl;
+	qDebug() << "vtk points: " << Point;
 
-	auto InputData = vtkSmartPointer<vtkPolyData>::New();
-	InputData->SetPoints(Points);
+	qDebug() << "Point refrence counter is " << Point->GetReferenceCount(); //1
+
+	auto PolyData = vtkPolyData::New(); // reference counter of PolyData is 1
+	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//1
+		
+	PolyData->SetPoints(Point);// increase the reference counter of Point
+	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//2
+
+	Point->Delete(); //decrease the reference counter of Point
+	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//1
+
+	auto Glyph = vtkSmartPointer<vtkGlyph3D>::New();
+
+	Glyph->SetInputData(0, PolyData);//increase the reference counter of PolyData
+
+	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//3
+	PolyData->Delete();//decrease the reference counter of PolyData
+	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//2
 
 	// draw spheres at the points
 	auto Sphere = vtkSmartPointer<vtkSphereSource>::New();
 
-	auto Glyphs = vtkSmartPointer<vtkGlyph3D>::New();
+	Glyph->SetInputConnection(1, Sphere->GetOutputPort());
 
-	Glyphs->SetInputData(0, InputData);
-
-	Glyphs->SetInputConnection(1, Sphere->GetOutputPort());
-
-	Glyphs->ScalingOff();
-	Glyphs->OrientOn();
-	Glyphs->ClampingOff();
-	Glyphs->SetVectorModeToUseVector();
-	Glyphs->SetIndexModeToOff();
+	Glyph->ScalingOff();
+	Glyph->OrientOn();
+	Glyph->ClampingOff();
+	Glyph->SetVectorModeToUseVector();
+	Glyph->SetIndexModeToOff();
 
 	// set up mapper that shows shperes at points
-	auto GlyphsMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-	GlyphsMapper->SetInputConnection(Glyphs->GetOutputPort());
+	auto GlyphMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+	GlyphMapper->SetInputConnection(Glyph->GetOutputPort());
 
-	auto GlyphActor = vtkActor::New();
-	GlyphActor->SetMapper(GlyphsMapper);
+	auto GlyphActor = vtkActor::New(); //refrence counter of GlyphActor is 1
+	GlyphActor->SetMapper(GlyphMapper);
 
 	//upcast to vktProp*, dynamic_cast is not necessary
 	return GlyphActor;  
@@ -339,7 +363,7 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Points)
 	GlyphActor->SetMapper(GlyphsMapper);
 	vtkProp* Prop = GlyphActor;
 	return GlyphActor;
-	// crash here
+	// crash here because GlyphActor is deleted
 	*/
 }
 
@@ -350,9 +374,9 @@ quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* Volu
 
 	PropInfomration PropInfo;
 
-	PropInfo.Name = "Image";
-
 	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Volume(" + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = Prop;
 
@@ -399,7 +423,7 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 			VolumeMapper = RcMapper;
 		}
 	}
-	else 
+	else
 	{
 		// max texture size for 3d textures: 128*256*256
 		// otherwise it is resized bevor rendering(SLOW!)
@@ -488,4 +512,66 @@ vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(double DataRange[2])
 	VolumeProperty->SetScalarOpacity(OpacityTransferFunction);
 
 	return VolumeProperty;
+}
+
+
+//======================================= Show Mesh ==============================================================
+quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color)
+{
+	auto Prop = this->CreatePloyMeshProp(MeshData, Color);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Mesh(" + QString::number(PropInfo.Handle) + ")";
+
+	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = MeshData;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
+}
+
+
+vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData, QString Color)
+{
+	auto MeshMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+
+	auto p = new int[3];
+
+/*	// read and set labels, if available
+
+	vtkDataArray* labels;
+
+		// set labels as scalar data to the points
+		MeshData->GetPointData()->SetScalars(labels);
+		
+		// map scalars to colors
+		SurfMapper->ScalarVisibilityOn();
+		SurfMapper->SetScalarRange(labels->GetRange());
+
+	// build and set lut
+	if (colorReader->GetSerializer() != NULL) 
+	{
+		vtkColorTransferFunction *colorLut = colorReader->GetSerializer()->GetColorTransferFunction();
+		SurfMapper->SetLookupTable(colorLut);
+	}
+	else 
+	{
+		vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+		lut->SetHueRange(0.6667, 0);
+		SurfMapper->SetLookupTable(lut);
+	}
+
+*/
+	MeshMapper->SetInputData(MeshData);
+
+	vtkSmartPointer<vtkActor> MeshProp = vtkSmartPointer<vtkActor>::New();
+	MeshProp->SetMapper(MeshMapper);
+
+	return MeshProp;
+	
 }
