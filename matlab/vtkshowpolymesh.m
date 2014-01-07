@@ -1,12 +1,10 @@
-function [PropHandle, Result] = vtkshowpolymesh(FigureHandle, Mesh)
+function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh)
 
-PropHandle=[];
-Client = MatlabClientClass;
+Handle=[];
 %%
 Command='vtkshowpolymesh';
-
-Taskhandle=['vtkshowpolymesh' num2str(uint64(100000*rand))];
-
+Taskhandle=[Command num2str(uint64(100000*rand))];
+%%
 ResultFileName='Result.json';
 
 PointNum=length(Mesh.Point);
@@ -49,6 +47,8 @@ Task.Text={{'Command', Command}, ...
 Task.Data={{PointDataFileName, FileType, PointDataType, Mesh.Point},...
            {CellDataFileName, FileType, CellDataType, Mesh.Cell}};
 
+%%       
+Client = MatlabClientClass;       
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0
     return
@@ -66,5 +66,5 @@ end
 %%
 Result=Client.ReadResult(Taskhandle, ResultFileName);
 
-PropHandle=Result.PropHandle;
-
+Handle.PropHandle=Result.PropHandle;
+Handle.FigureHandle=Result.FigureHandle;

@@ -18,12 +18,12 @@ for n=1:FileNum
     switch FileType
         case 'txt'
             WriteTaskData_txt(FullFileName, Data);
-            
+
+        case 'matrix'
+            WriteTaskData_matrix(FullFileName, DataType, Data);
+
         case 'image'
             WriteTaskData_image(FullFileName, DataType, Data);
-
-        case 'feature'
-            WriteTaskData_feature(FullFileName, DataType, Data);
             
         otherwise
             disp('unknown FileType')
@@ -74,8 +74,8 @@ fclose(fid);
 IsSucess=1;
 end
 
-function IsSucess=WriteTaskData_feature(FullFileName, DataType, Data)
-% each colum of Data is a feature vector
+function IsSucess=WriteTaskData_matrix(FullFileName, DataType, Data)
+% store matrix colume by colume
 
 IsSucess=0;
 
@@ -102,7 +102,26 @@ end
 
 function IsSucess=WriteTaskData_image(FullFileName, DataType, Data)
 
+[Ly, Lx, Lz]=size(Data);
 
+IsSucess=0;
+
+fid = fopen(FullFileName, 'w');
+if fid == -1
+    disp('can not open feature file')
+    fclose(fid);
+    return
+end
+
+for z=1:Lz;
+    temp=Data(:,:,z);
+    temp=temp';
+    fwrite(fid, temp(:), DataType);    
+end
+
+fclose(fid);
+    
+IsSucess=1;
 
 end
 

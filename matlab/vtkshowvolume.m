@@ -1,18 +1,17 @@
-function [PropHandle, Result] = vtkshowvolume(FigureHandle, Volume)
+function [Handle, Result] = vtkshowvolume(FigureHandle, Volume)
 
-PropHandle=[];
-Client = MatlabClientClass;
+Handle=[];
 %%
 Command='vtkshowvolume';
-
-Taskhandle=['vtkshowvolume' num2str(uint64(100000*rand))];
-
+Taskhandle=[Command num2str(uint64(100000*rand))];
+%%
 ResultFileName='Result.json';
 
-[Lz, Ly, Lx]=size(Volume);
+[Ly, Lx, Lz]=size(Volume);
+
 ImageSize=[num2str(int32(Lx), '%d') ',' num2str(int32(Ly), '%d') ',' num2str(int32(Lz), '%d')];
 
-DataRange=[num2str(min(Volume(:)), '%f') ',' num2str(max(Volume(:)), '%f')];
+DataRange=[num2str(min(Volume(:)), '%10.10f') ',' num2str(max(Volume(:)), '%10.10f')];
 
 ImageDataFileName='ImageData.image';
 FileType='image';
@@ -27,6 +26,9 @@ Task.Text={{'Command', Command}, ...
            {'ResultFileName', ResultFileName}};
 
 Task.Data={{ImageDataFileName, FileType, DataType, Volume}};
+
+%%
+Client = MatlabClientClass;
 
 IsSucess = Client.WriteTask(Taskhandle, Task);
 if IsSucess == 0
@@ -45,5 +47,5 @@ end
 %%
 Result=Client.ReadResult(Taskhandle, ResultFileName);
 
-PropHandle=Result.PropHandle;
-
+Handle.PropHandle=Result.PropHandle;
+Handle.FigureHandle=Result.FigureHandle;

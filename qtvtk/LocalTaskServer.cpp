@@ -5,9 +5,13 @@
 #include <QDir>
 #include <QDirIterator>
 
+
+#include <vtkImageData.h>
+
 #include <memory>
 
 #include "LocalTaskServer.h"
+
 
 LocalTaskServer::LocalTaskServer()
 {
@@ -64,12 +68,49 @@ void LocalTaskServer::test()
 
 	for (int i = 0; i < 10; ++i)
 	{
-		points->InsertPoint(i, double(100 + i), double(100 + i), double(100 + i));
+		points->InsertPoint(i, double(i), double(i), double(i));
 	}
 
-	auto Prop = Figure->PlotPoint(points);
+	auto PointProp = Figure->PlotPoint(points);
 
-	std::cout << "vtkProp Handle: " << Prop << std::endl;
+	std::cout << "PointProp Handle: " << PointProp << std::endl;
+
+	auto Image = vtkImageData::New();
+
+	int ImageSize[3] = { 50, 100, 20 };
+
+	Image->SetDimensions(ImageSize[0], ImageSize[1], ImageSize[2]);
+
+	Image->AllocateScalars(VtkDataTypeEnum::VALUE_DOUBLE, 1);
+
+	for (int z = 0; z < ImageSize[2]; ++z)
+	{
+		for (int y = 0; y < ImageSize[1]; ++y)
+		{
+			for (int x = 0; x < ImageSize[0]; ++x)
+			{
+				auto p = static_cast<double*>(Image->GetScalarPointer(x, y, z));
+				if (z < 10)
+				{
+					p[0] = 1;
+				}
+				else
+				{
+					p[0] = 10;
+				}				
+			}
+		}
+	}
+
+	double DataRange[2] = { 1, 10 };
+
+	auto VolumeProperty = Figure->GetDefaultVolumeProperty(DataRange);
+
+	auto RenderMethod = Figure->GetDefaultRenderMethod();
+
+	auto ImageProp = Figure->ShowVolume(Image, VolumeProperty, RenderMethod);
+
+	std::cout << "ImageProp Handle: " << ImageProp << std::endl;
 
 }
 

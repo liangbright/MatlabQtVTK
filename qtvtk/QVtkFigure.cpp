@@ -233,8 +233,8 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 		// when adding first component: automatically reset view
 		if (IsFirst)
 		{
-			m_QVtkWidget->GetRenderWindow()->Render();
 			m_Renderer->ResetCamera();
+			m_QVtkWidget->GetRenderWindow()->Render();
 		}
 
 		this->Refresh();
@@ -252,8 +252,6 @@ void QVtkFigure::RemoveProp(quint64 PropHandle)
 		m_MainWindow->RemovePropMenu(&PropInfo);
 
 		m_Renderer->RemoveViewProp(PropInfo.Prop);
-
-		PropInfo.DataSource->Delete();
 
 		m_PropRecord.erase(it);
 
@@ -283,6 +281,9 @@ void QVtkFigure::ChangePropVisibility()
 		else
 			PropInfo.Prop->SetVisibility(1);
 
+		//m_Renderer->ResetCamera();
+        //m_QVtkWidget->GetRenderWindow()->Render();
+		
 		this->Refresh();
 	}
 
@@ -306,8 +307,6 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* Point)
 
 	PropInfo.Prop = Prop;
 
-	PropInfo.DataSource = Point;
-
 	this->AddProp(PropInfo);
 
 	return PropInfo.Handle;
@@ -325,9 +324,6 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Point)
 		
 	PolyData->SetPoints(Point);// increase the reference counter of Point
 	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//2
-
-	Point->Delete(); //decrease the reference counter of Point
-	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//1
 
 	auto Glyph = vtkSmartPointer<vtkGlyph3D>::New();
 
@@ -355,6 +351,10 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Point)
 	auto GlyphActor = vtkActor::New(); //refrence counter of GlyphActor is 1
 	GlyphActor->SetMapper(GlyphMapper);
 
+	//decrease the reference counter of Point
+	Point->Delete(); 
+	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//1
+
 	//upcast to vktProp*, dynamic_cast is not necessary
 	return GlyphActor;  
 
@@ -380,7 +380,7 @@ quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* Volu
 
 	PropInfo.Prop = Prop;
 
-	PropInfo.DataSource = VolumeData;
+	//PropInfo.DataSource = VolumeData;
 
 	this->AddProp(PropInfo);
 
@@ -394,56 +394,35 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 	// raycasting may be nicer but is limited on data types
 	//vtkSmartVolumeMapper *smartVolumeMapper = vtkSmartVolumeMapper::New();
 
+	// do not use vtkSmartPointer (then .take()) here
 	vtkVolumeMapper* VolumeMapper = nullptr;
 
-	if (RenderMethord == "RayCast") 
+	vtkGPUVolumeRayCastMapper *GpuRcMapper = vtkGPUVolumeRayCastMapper::New();
+
+	if (GpuRcMapper->IsRenderSupported(this->GetRenderWindow(), VolumeProperty)) 
 	{
-		vtkGPUVolumeRayCastMapper *GpuRcMapper = vtkGPUVolumeRayCastMapper::New();
-
-		if (GpuRcMapper->IsRenderSupported(this->GetRenderWindow(), VolumeProperty)) 
-		{
-			qDebug("GPU OpenGL RayCasting enabled!");
-			VolumeMapper = GpuRcMapper;
-		}
-		// no fast GPU raycasting available.
-		else 
-		{
-			GpuRcMapper->Delete();
-
-			qDebug("SLOW software ray casting.");
-			//vtkVolumeRayCastCompositeFunction *compositeFunction = vtkVolumeRayCastCompositeFunction::New();
-			vtkFixedPointVolumeRayCastMapper *RcMapper = vtkFixedPointVolumeRayCastMapper::New();
-			RcMapper->SetBlendModeToComposite();
-			//raycastVolumeMapper->SetVolumeRayCastFunction(compositeFunction);
-			//compositeFunction->Delete();
-			//raycastVolumeMapper->AutoAdjustSampleDistancesOn();
-			
-			//Debug() << "sample distance" << raycastVolumeMapper->GetSampleDistance();
-
-			VolumeMapper = RcMapper;
-		}
+		qDebug("GPU OpenGL RayCasting enabled!");
+		VolumeMapper= GpuRcMapper;
 	}
-	else
+	// no fast GPU raycasting available.
+	else 
 	{
-		// max texture size for 3d textures: 128*256*256
-		// otherwise it is resized bevor rendering(SLOW!)
-		qDebug("3D texture mapping.");
+		GpuRcMapper->Delete();
 
-		int dims[3];
-		VolumeData->GetDimensions(dims);
-		if (dims[0] > 128 || dims[1] > 256 || dims[2] > 256) 
-		{
-			qDebug("WARNING: volume too large for efficient 3d texture mapping (128x256x256).");
-		}
+		qDebug("SLOW software ray casting.");
+		//vtkVolumeRayCastCompositeFunction *compositeFunction = vtkVolumeRayCastCompositeFunction::New();
+		
+		auto *RcMapper = vtkFixedPointVolumeRayCastMapper::New();
+		
+		RcMapper->SetBlendModeToComposite();
 
-		VolumeMapper = vtkVolumeTextureMapper3D::New();
-		/*
-		else if(volumeData->Get) {
-		// use 2d texture mapping for bigger volumes
-		Debug("2D texture mapping.");
-		volumeMapper = vtkVolumeTextureMapper2D::New();
-		}
-		*/
+		//raycastVolumeMapper->SetVolumeRayCastFunction(compositeFunction);
+		//compositeFunction->Delete();
+		//raycastVolumeMapper->AutoAdjustSampleDistancesOn();
+			
+		//Debug() << "sample distance" << raycastVolumeMapper->GetSampleDistance();
+
+		VolumeMapper= RcMapper;
 	}
 
 	VolumeMapper->SetInputData(VolumeData);
@@ -454,7 +433,11 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 
 	VolumeProp->SetProperty(VolumeProperty);
 
-	VolumeProp->Modified();
+	//VolumeProp->Modified();
+
+	VolumeMapper->Delete();
+	VolumeProperty->Delete();
+	VolumeData->Delete();
 
 	return VolumeProp;
 }
@@ -528,8 +511,6 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color)
 
 	PropInfo.Prop = Prop;
 
-	PropInfo.DataSource = MeshData;
-
 	this->AddProp(PropInfo);
 
 	return PropInfo.Handle;
@@ -568,10 +549,11 @@ vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData, QString Color)
 
 */
 	MeshMapper->SetInputData(MeshData);
-
-	vtkSmartPointer<vtkActor> MeshProp = vtkSmartPointer<vtkActor>::New();
+	
+	auto MeshProp = vtkActor::New();
 	MeshProp->SetMapper(MeshMapper);
 
+	MeshData->Delete();
+
 	return MeshProp;
-	
 }

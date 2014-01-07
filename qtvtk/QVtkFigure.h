@@ -24,9 +24,7 @@ public:
 
 	QString Name; //default is ""
 
-	vtkObject* DataSource = nullptr;
-
-	vtkProp* Prop = nullptr;
+	vtkProp* Prop = nullptr;  
 
 	QMenu* PropMenu = nullptr;
 };
