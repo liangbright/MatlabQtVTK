@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QMap>
+#include <QDebug>
 
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
@@ -631,6 +632,8 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 	auto RenderMethod = Figure->GetDefaultRenderMethod();
 
 	//--------------------- Get the data ---------------------------------------//
+	qDebug() << "Read Image Data from" << DataFileFullName;
+
 	vtkImageData* ImageData = nullptr;
 	auto IsReadOK = ReadImageData(DataFileFullName, ImageSize, DataType, ImageData);
 	if (ImageData == nullptr)
@@ -640,6 +643,9 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 		qWarning() << FailureInfo;
 		return false;
 	}
+
+	qDebug() << "Image Data is loaded:" << DataFileFullName;
+
 	//---------------------- Show Image ----------------------------------------//
 	auto PropHandle = Figure->ShowVolume(ImageData, VolumeProperty, RenderMethod);
 
@@ -760,6 +766,9 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get MeshColor --------------------------
+	QString MeshColor = 'r';
+
 	// get CellDataFileName  ------------------------------------------------------
 	QString CellDataFileName;
 	it = TaskObject.find("CellDataFileName");
@@ -778,13 +787,15 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	vtkPolyData* MeshData = nullptr;
 
+	qDebug() << "Read Mesh Data from " << FullFileName_PointData << ", and " << FullFileName_CellData;
+
 	auto IsReadOK = this->ReadPolyMeshData(FullFileName_PointData, PointNum, FullFileName_CellData, CellNum, MeshData);
 	if (IsReadOK == false)
 	{
 		return false;
 	}
 
-	QString MeshColor = 'r';
+	qDebug() << "Read Mesh Data is loaded";
 
 	//---------------------- Show Mesh ----------------------------------------//
 
@@ -1216,9 +1227,14 @@ bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, \
 			return false;
 		}
 
-		auto absolute_id = List.at(0).toInt();
+		// weird: output 0
+		//auto point_input_id = List.at(0).toInt();
+		
+		auto point_input_id = int(List.at(0).toDouble());
 
-		PointIndexTable[absolute_id] = PointCounter;
+		//qDebug() << "point_input_id: " << point_input_id;
+
+		PointIndexTable[point_input_id] = PointCounter;
 
 		auto x = List.at(1).toDouble();
    		auto y = List.at(2).toDouble();
@@ -1275,11 +1291,11 @@ bool TaskHandler::ReadPolyMeshCellData(QString FullFileName, int CellNum, const 
 
 		for (int i = 1; i < ListSize; ++i)
 		{
-			auto point_absolute_id = List.at(i).toInt();
+			auto point_input_id = int(List.at(i).toDouble());  //toInt() is weird: 1.00000000 ->0
 
-			auto point_id = PointIndexTable.at(point_absolute_id);
+			auto point_local_id = PointIndexTable.at(point_input_id);
 
-			Cell->InsertCellPoint(point_id);
+			Cell->InsertCellPoint(point_local_id);
 		}
 
 	}

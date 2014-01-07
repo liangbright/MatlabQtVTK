@@ -1,9 +1,13 @@
 function [Handle, Result] = vtkshowvolume(FigureHandle, Volume)
 
 Handle=[];
+Result=[];
 %%
 Command='vtkshowvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
+
+Task.Command=Command;
+Task.Taskhandle=Taskhandle;
 %%
 ResultFileName='Result.json';
 
@@ -30,7 +34,7 @@ Task.Data={{ImageDataFileName, FileType, DataType, Volume}};
 %%
 Client = MatlabClientClass;
 
-IsSucess = Client.WriteTask(Taskhandle, Task);
+IsSucess = Client.WriteTask(Task);
 if IsSucess == 0
     return
 end

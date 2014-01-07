@@ -1,10 +1,15 @@
 function [Handle, Result] = vtkplotpoint(FigureHandle, Point, Color)
 
 Handle=[];
+Result=[];
 %%
 Command='vtkplotpoint';
 Taskhandle=[Command num2str(uint64(100000*rand))];
+
+Task.Command=Command;
+Task.Taskhandle=Taskhandle;
 %%
+
 ResultFileName='Result.json';
 
 [~, Num]=size(Point);
@@ -13,8 +18,8 @@ PointNum=num2str(int64(Num), '%d');
 
 PointColor=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
 
-PointDataFileName='PointData.matrix';
-FileType='matrix';
+PointDataFileName='PointData.vector';
+FileType='vector';
 DataType='double';
 
 Task.Text={{'Command', Command}, ...
@@ -30,7 +35,7 @@ Task.Data={{PointDataFileName, FileType, DataType, Point}};
 %%
 Client = MatlabClientClass;
 
-IsSucess = Client.WriteTask(Taskhandle, Task);
+IsSucess = Client.WriteTask(Task);
 if IsSucess == 0
     return
 end

@@ -40,7 +40,7 @@ end
 
 end
 
-function IsSucess = WriteTask(this, Taskhandle, Task)
+function IsSucess = WriteTask(this, Task)
 % Task.Text is cell : {{key, value}...}
 % key is string
 % value1 is string
@@ -58,21 +58,25 @@ function IsSucess = WriteTask(this, Taskhandle, Task)
 % write JsonObject to "M:/PendingTasks/Taskhandle/Task.json"
 % write Data to "M:/PendingTasks/Taskhandle/DataFileFullName"
 %--------------------------------------------------------------
-FilePath=['M:\PendingTasks\' Taskhandle '\'];
+IsSucess=0;
+%-----------
+FilePath=['M:\PendingTasks\' Task.Taskhandle '\'];
 mkdir(FilePath)
-%--------------------------------------------------------------
+%---------------------------------------------------
 FullFileName=[FilePath 'Task.json'];
 fclose('all');
 IsSucess1 = WriteTaskText(Task.Text, FullFileName);
 if IsSucess1 == 0
     return
 end
-IsSucess2 = WriteTaskData(Task.Data, FilePath);
-if IsSucess2 == 0
-    return
+if ~isempty(Task.Data)
+    IsSucess2 = WriteTaskData(Task.Data, FilePath);
+    if IsSucess2 == 0
+        return
+    end
 end
 %-------------------------------------------------------
-IsSucess=2;
+IsSucess=1;
 end
 
 function Status=WaitForResult(this, Taskhandle)

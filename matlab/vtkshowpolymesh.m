@@ -1,40 +1,34 @@
 function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh)
 
 Handle=[];
+Result=[];
+
+if ~isa(Mesh, 'PolyMeshClass')
+    disp('Warning: Input Mesh may not be a PolyMesh @ vtkshowpolymesh')
+end
 %%
 Command='vtkshowpolymesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 ResultFileName='Result.json';
 
-PointNum=length(Mesh.Point);
+
+DataFileType='txt';
+
+[~, PointNum]=size(Mesh.Point);
 PointNum=num2str(int64(PointNum), '%d');
+
+PointDataFileName='PointData.txt';
+PointDataType='';
+
+CellDataFileName='CellData.txt';
+CellDataType='';
 
 CellNum=length(Mesh.Cell);
 CellNum=num2str(int64(CellNum), '%d');
 
-FileType='txt';
-
-PointDataFileName='PointData.txt';
-PointDataType='double';
-% convert id to int64
-for k=1:length(Mesh.Point)
-    temp=Mesh.Point{k};   
-    temp{1}=int64(temp{1});
-    Mesh.Point{k}=temp;
-end
-
-CellDataFileName='CellData.txt';
-CellDataType='int64';
-% convert all to int64
-for k=1:length(Mesh.Cell)
-    temp=Mesh.Cell{k};
-    num=length(temp);
-    for n=1:num
-        temp{n}=int64(temp{n});
-    end
-    Mesh.Cell{k}=temp;
-end
+Task.Command=Command;
+Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
@@ -44,15 +38,19 @@ Task.Text={{'Command', Command}, ...
            {'CellDataFileName', CellDataFileName},...
            {'ResultFileName', ResultFileName}};
 
-Task.Data={{PointDataFileName, FileType, PointDataType, Mesh.Point},...
-           {CellDataFileName, FileType, CellDataType, Mesh.Cell}};
+Task.Data={{PointDataFileName, DataFileType, PointDataType, Mesh.Point},...
+           {CellDataFileName, DataFileType, CellDataType, Mesh.Cell}};
 
 %%       
 Client = MatlabClientClass;       
-IsSucess = Client.WriteTask(Taskhandle, Task);
+disp('write data ......')
+tic
+IsSucess = Client.WriteTask(Task);
 if IsSucess == 0
     return
 end
+toc
+disp('write data completed')
 %%
 IsInformed=Client.InformServer();
 if IsInformed == 0
