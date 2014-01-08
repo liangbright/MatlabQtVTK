@@ -305,9 +305,9 @@ void QVtkFigure::ChangePropVisibility()
 // Output
 //   PropInfo.Handle : 0 if something goes wrong; >0 is good
 //---------------------------------------------------------------------------------------
-quint64 QVtkFigure::PlotPoint(vtkPoints* Point)
+quint64 QVtkFigure::PlotPoint(vtkPoints* PointData)
 {
-	auto Prop = this->CreatePointProp(Point);
+	auto Prop = this->CreatePointProp(PointData);
 
 	PropInfomration PropInfo;
 
@@ -323,17 +323,17 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* Point)
 }
 
 
-vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Point)
+vtkProp* QVtkFigure::CreatePointProp(vtkPoints *PointData)
 {
-	qDebug() << "vtk points: " << Point;
+	qDebug() << "vtk points: " << PointData;
 
-	qDebug() << "Point refrence counter is " << Point->GetReferenceCount(); //1
+	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount(); //1
 
 	auto PolyData = vtkPolyData::New(); // reference counter of PolyData is 1
 	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//1
 		
-	PolyData->SetPoints(Point);// increase the reference counter of Point
-	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//2
+	PolyData->SetPoints(PointData);// increase the reference counter of Point
+	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//2
 
 	auto Glyph = vtkSmartPointer<vtkGlyph3D>::New();
 
@@ -362,8 +362,8 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *Point)
 	GlyphActor->SetMapper(GlyphMapper);
 
 	//decrease the reference counter of Point
-	Point->Delete(); 
-	qDebug() << "Point refrence counter is " << Point->GetReferenceCount();//1
+	PointData->Delete();
+	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//1
 
 	//upcast to vktProp*, dynamic_cast is not necessary
 	return GlyphActor;  
@@ -457,7 +457,7 @@ QString QVtkFigure::GetDefaultRenderMethod()
 	return QString("RayCast");
 }
 
-vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(double DataRange[2])
+vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(const double DataRange[2])
 {
 	auto VolumeProperty = vtkVolumeProperty::New();
 
@@ -527,20 +527,20 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 }
 
 
-vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* Mesh)
+vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData)
 {
 	auto MeshMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 
-	MeshMapper->SetInputData(Mesh);
+	MeshMapper->SetInputData(MeshData);
 	
-	Mesh->Delete();
+	MeshData->Delete();
 
 	auto MeshProp = vtkActor::New();
 	MeshProp->SetMapper(MeshMapper);
 
 	double ColorValue[3] = { 1, 1, 1 }; //white default;
 
-	auto FiledPtr = Mesh->GetFieldData();
+	auto FiledPtr = MeshData->GetFieldData();
 
 	auto Num = FiledPtr->GetNumberOfArrays();
 	if (Num > 0)

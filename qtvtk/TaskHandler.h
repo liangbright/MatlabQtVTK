@@ -43,12 +43,12 @@ public:
 		return  FileName;
 	}
 
-	QString GetFullFileNameAndPath() const
+	QString GetFilePathAndName() const
 	{
 		return Path + FolderName + "/" + FileName;
 	}
 
-	QString GetFullPath() const
+	QString GetFilePath() const
 	{
 		return Path + FolderName + "/";
 	}
@@ -157,25 +157,25 @@ private:
 
 	//------------- Read Data From File ---------------------------------------------//
 
-	bool ReadPointData(QString FullFileName, int PointNum, QString DataType, vtkPoints*& PointData);
+	bool ReadPointData(QString FilePathAndName, int PointNum, QString DataType, vtkPoints*& PointData);
 
-	bool ReadImageData(QString FullFileName, int ImageSize[3], QString DataType, vtkImageData*& ImageData);
+	bool ReadImageData(QString FilePathAndName, const int ImageSize[3], QString DataType, vtkImageData*& ImageData);
 	
-	bool ReadPolyMeshData_From_INP(QString FullFileName, vtkPolyData*& MeshData);
+	bool ReadPolyMeshData_From_INP(QString FilePathAndName, vtkPolyData*& MeshData);
 
-	bool ReadPolyMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
-		                  QString FullFileName_CellData,  int CellNum,
+	bool ReadPolyMeshData(QString FilePathAndName_PointData, int PointNum, QString PointDataType,
+		                  QString FilePathAndName_CellData,  int CellNum,
 						  vtkPolyData*& MeshData);
 
-	bool ReadPolyMeshPointData(QString FullFileName, int PointNum, QString PointDataType, vtkPoints*& PointData);
+	bool ReadPolyMeshPointData(QString FilePathAndName, int PointNum, QString PointDataType, vtkPoints*& PointData);
  
-	bool ReadPolyMeshCellData(QString FullFileName,  int CellNum,  vtkCellArray*& CellData);
+	bool ReadPolyMeshCellData(QString FilePathAndName,  int CellNum,  vtkCellArray*& CellData);
 
-	bool ReadTriangleMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
-	                       	  QString FullFileName_TriangleData, int TriangleNum,
+	bool ReadTriangleMeshData(QString FilePathAndName_PointData, int PointNum, QString PointDataType,
+	                       	  QString FilePathAndName_TriangleData, int TriangleNum,
 							  vtkPolyData*& MeshData);
 
-	bool ReadTriangleMeshTriangleData(QString FullFileName, int TriangleNum, vtkCellArray*& TriangleData);
+	bool ReadTriangleMeshTriangleData(QString FilePathAndName, int TriangleNum, vtkCellArray*& TriangleData);
 
 	//----------------------- process matlab command -------------------//
 

@@ -74,16 +74,18 @@ public:
 
 	quint64 GeneratePropHandle();
 
-	quint64 PlotPoint(vtkPoints* Point);
-	vtkProp* CreatePointProp(vtkPoints* Point);
+	//---------------------------------------------------------------------
 
+	quint64 PlotPoint(vtkPoints* PointData);
+
+	vtkProp* CreatePointProp(vtkPoints* PointData);
 	//---------------------------------------------------------------------
 
 	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
 
 	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
 
-	vtkVolumeProperty* GetDefaultVolumeProperty(double DataRange[2]);
+	vtkVolumeProperty* GetDefaultVolumeProperty(const double DataRange[2]);
 
 	QString GetDefaultRenderMethod();
 	//----------------------------------------------------------------------
