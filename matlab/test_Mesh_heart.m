@@ -13,8 +13,20 @@ PolyMesh{k} = ReadPolyMeshDataFile_inp(FullFileName{k});
 toc
 end
 %%
-[FigureHandle, Result1] = vtkfigure();
+FigureHandle1 = vtkfigure();
+[Handle1, Result1] = vtkshowpolymesh(FigureHandle1, PolyMesh{1}, 'green');
+[Handle2, Result2] = vtkshowpolymesh(FigureHandle1, PolyMesh{2}, 'yellow');
 %%
-tic
-[Handle, Result] = vtkshowpolymesh(FigureHandle, PolyMesh{5});
-toc
+FigureHandle2 = vtkfigure();
+[Handle3, Result3] = vtkshowpolymesh(FigureHandle2, PolyMesh{3}, 'green');
+[Handle4, Result4] = vtkshowpolymesh(FigureHandle2, PolyMesh{4}, 'red');
+%%
+FigureHandle3 = vtkfigure();
+[Handle5, Result5] = vtkshowpolymesh(FigureHandle3, PolyMesh{5}, 'green');
+[Handle6, Result6] = vtkshowpolymesh(FigureHandle3, PolyMesh{6}, 'red');
+%%
+FullPath='E:\HeartData\P1943091-im_6-phase10-close-leaflet\im_6\phase0\';
+Volume = ReadDIOMVolume(FullPath);
+%%
+FigureHandle4 = vtkfigure();
+Result = vtkshowvolume(FigureHandle4, Volume);

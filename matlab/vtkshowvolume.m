@@ -1,13 +1,10 @@
-function [Handle, Result] = vtkshowvolume(FigureHandle, Volume)
+function Result = vtkshowvolume(FigureHandle, Volume)
 
 Handle=[];
 Result=[];
 %%
 Command='vtkshowvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
-
-Task.Command=Command;
-Task.Taskhandle=Taskhandle;
 %%
 ResultFileName='Result.json';
 
@@ -20,6 +17,9 @@ DataRange=[num2str(min(Volume(:)), '%10.10f') ',' num2str(max(Volume(:)), '%10.1
 ImageDataFileName='ImageData.image';
 FileType='image';
 DataType='double';
+%---------------------------------------------------------------------
+Task.Command=Command;
+Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...

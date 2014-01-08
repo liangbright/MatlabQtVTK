@@ -64,6 +64,10 @@ void LocalTaskServer::test()
 
 	auto Figure = new QVtkFigure(0);
 
+	Figure->SetTitle("FigureHandle = 0");
+
+	Figure->Show();
+
 	auto points = vtkPoints::New();
 
 	for (int i = 0; i < 10; ++i)

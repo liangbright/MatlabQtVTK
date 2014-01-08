@@ -6,12 +6,13 @@
 #include <QDebug>
 #include <QDir>
 #include <QMap>
-#include <QDebug>
 
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
 #include <vtkCellArray.h>
 #include <vtkImageData.h>
+#include <vtkDoubleArray.h>
+#include <vtkFieldData.h>
 
 #include <ctime>
 #include <vector>
@@ -22,6 +23,8 @@
 TaskHandler::TaskHandler()
 {
 	this->CreateMatlabCommandTranslator();
+
+	this->CreateRBGColorTable();
 
 	m_time.start();
 
@@ -73,13 +76,21 @@ void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle)
 
 	auto Figure_upt = std::unique_ptr<QVtkFigure>(new QVtkFigure(Handle));
 
-	connect(Figure_upt.get(), &QVtkFigure::QVtkFigureClosed, this, &TaskHandler::CloseQVtkFigure);
+	connect(Figure_upt.get(), &QVtkFigure::UserCloseFigure, this, &TaskHandler::CloseQVtkFigure);
+
+	QString Title = "FigureHandle = " + QString::number(Handle);
+
+	Figure_upt->SetTitle(Title);
+
+	Figure_upt->Show();
 
 	*FigureHandle = Handle;
 
 	*Figure=Figure_upt.get();
 
 	m_FigureRecord[Handle] = std::move(Figure_upt);
+
+	//m_FigureRecord[Handle]->Show();
 }
 
 
@@ -731,6 +742,18 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get MeshColor  ------------------------------------------------------
+	QString MeshColorName = "white";//default color in QVtkFigure
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
+	{
+		MeshColorName = it.value().toString();
+	}
+	else
+	{
+		qWarning("MeshColorName is unknown, use white");
+	}
+
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -783,9 +806,6 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// get MeshColor --------------------------
-	QString MeshColor = 'r';
-
 	// get CellDataFileName  ------------------------------------------------------
 	QString CellDataFileName;
 	it = TaskObject.find("CellDataFileName");
@@ -818,9 +838,27 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
+	//-----------------------------------------------------------------------
+	// set color
+	if (MeshColorName != "white")
+	{	
+		double Value[3] = { 0, 0, 0 };
+
+		auto IsColorOK = TaskHandler::GetRBGColorByName(MeshColorName, Value);
+		if (IsColorOK == true)
+		{
+			vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
+			tempColor->SetNumberOfComponents(3);
+			tempColor->SetName("Color");
+			tempColor->InsertNextTuple(Value);
+
+			MeshData->GetFieldData()->AddArray(tempColor);
+		}
+	}
+
 	//---------------------- Show Mesh ----------------------------------------//
 
-	auto PropHandle = Figure->ShowPloyMesh(MeshData, MeshColor);
+	auto PropHandle = Figure->ShowPloyMesh(MeshData);
 
 	//---------------------- Write Result ----------------------------------------//
 
@@ -901,6 +939,18 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get MeshColor  ------------------------------------------------------
+	QString MeshColorName = "white";//default color in QVtkFigure
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
+	{
+		MeshColorName = it.value().toString();
+	}
+	else
+	{
+		qWarning("MeshColorName is unknown, use white");
+	}
+
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -955,9 +1005,6 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// get MeshColor ----------------------------------------------------------
-	QString MeshColor = 'r';
-
 	// get TriangleDataFileName  ------------------------------------------------------
 	QString TriangleDataFileName;
 	it = TaskObject.find("TriangleDataFileName");
@@ -993,9 +1040,27 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
+	//-----------------------------------------------------------------------
+	// set color
+	if (MeshColorName != "white")
+	{
+		double Value[3] = { 0, 0, 0 };
+
+		auto IsColorOK = TaskHandler::GetRBGColorByName(MeshColorName, Value);
+		if (IsColorOK == true)
+		{
+			vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
+			tempColor->SetNumberOfComponents(3);
+			tempColor->SetName("Color");
+			tempColor->InsertNextTuple(Value);
+
+			MeshData->GetFieldData()->AddArray(tempColor);
+		}
+	}
+
 	//---------------------- Show Mesh ----------------------------------------//
 
-	auto PropHandle = Figure->ShowPloyMesh(MeshData, MeshColor);
+	auto PropHandle = Figure->ShowPloyMesh(MeshData);
 
 	if (PropHandle == 0)
 	{
@@ -1820,4 +1885,107 @@ quint64 TaskHandler::GenerateFigureHandle()
 
 	return (quint64)EndTime;
 	*/
+}
+
+void TaskHandler::CreateRBGColorTable()
+{
+	RGBColor Color;
+
+	Color.Name = "white";
+	Color.Value[0] = 1;
+	Color.Value[1] = 1;
+	Color.Value[2] = 1;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "black";
+	Color.Value[0] = 0;
+	Color.Value[1] = 0;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "red";
+	Color.Value[0] = 1;
+	Color.Value[1] = 0;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "green";
+	Color.Value[0] = 0;
+	Color.Value[1] = 1;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "blue";
+	Color.Value[0] = 0;
+	Color.Value[1] = 0;
+	Color.Value[2] = 1;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "yellow";
+	Color.Value[0] = 1;
+	Color.Value[1] = 1;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "cyan";
+	Color.Value[0] = 0;
+	Color.Value[1] = 1;
+	Color.Value[2] = 1;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "magenta";
+	Color.Value[0] = 1;
+	Color.Value[1] = 0;
+	Color.Value[2] = 1;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "silver";
+	Color.Value[0] = 192 / 255.0;
+	Color.Value[1] = 192 / 255.0;
+	Color.Value[2] = 192 / 255.0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "orange";
+	Color.Value[0] = 1;
+	Color.Value[1] = 165 / 255.0;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "gold";
+	Color.Value[0] = 1;
+	Color.Value[1] = 215 / 255.0;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "darkred";
+	Color.Value[0] = 139 / 255.0;
+	Color.Value[1] = 0;
+	Color.Value[2] = 0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "purple";
+	Color.Value[0] = 128 / 255.0;
+	Color.Value[1] = 0;
+	Color.Value[2] = 128 / 255.0;
+	m_RBGColorTable[Color.Name] = Color;
+
+	Color.Name = "wheat";
+	Color.Value[0] = 245 / 255.0;
+	Color.Value[1] = 222 / 255.0;
+	Color.Value[2] = 179 / 255.0;
+	m_RBGColorTable[Color.Name] = Color;
+}
+
+bool TaskHandler::GetRBGColorByName(QString ColorName, double* Value)
+{
+	auto it = m_RBGColorTable.find(ColorName);
+	if (it != m_RBGColorTable.end())
+	{
+		auto Color = it.value();
+		Value[0] = Color.Value[0];
+		Value[1] = Color.Value[1];
+		Value[2] = Color.Value[2];
+		return true;
+	}
+	return false;
 }

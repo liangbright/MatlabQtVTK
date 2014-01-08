@@ -1,4 +1,19 @@
-function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh)
+function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
+
+%MeshColorName
+% white
+% black
+% read
+% blue
+% yellow
+% cyan
+% magenta
+% silver
+% orange
+% gold
+% darkred
+% purple
+% wheat
 
 Handle=[];
 Result=[];
@@ -41,6 +56,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'MeshColorName', MeshColorName}, ...
            {'PointNum', PointNum}, ...          
            {'PointDataFileName', PointDataFileName}, ...
            {'PointDataType', PointDataType}, ...

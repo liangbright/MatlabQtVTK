@@ -34,9 +34,12 @@
 #include <vtkGPUVolumeRayCastMapper.h>
 #include <vtkFixedPointVolumeRayCastMapper.h>
 #include <vtkDataSetMapper.h>
-#include <vtkDelaunay3D.h>
-#include <vtkGeometryFilter.h>
+//#include <vtkDelaunay3D.h>
+//#include <vtkGeometryFilter.h>
 #include <vtkLookupTable.h>
+#include <vtkFieldData.h>
+#include <vtkPointData.h>
+#include <vtkProperty.h>
 
 #include "QVtkFigureMainWindow.h"
 #include "QVtkFigure.h"
@@ -57,29 +60,34 @@ QVtkFigure::QVtkFigure(quint64 Handle)
 
 	m_QVtkWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
+	//vtk-----------------------------------------------------
 	m_Renderer = vtkRenderer::New();
 
 	m_QVtkWidget->GetRenderWindow()->AddRenderer(m_Renderer);
 
+	m_Renderer->Delete();
+	//-----------------------------------------------------//
+
 	m_MainWindow->CreateMenus(this);
 
-	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::Close);
+	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::UserCloseFigure);
 
 	m_time.start();
 
 	m_PropCounter = 0;
-
-	this->Show();
 }
 
 QVtkFigure::~QVtkFigure()
 {
-	m_Renderer->Delete();
-
 	m_MainWindow->deleteLater();
 
-	// Qt memory management cleans these up:
-	//delete m_QVtkWidget;	
+	// Qt memory management :
+	// m_MainWindow delelets m_QVtkWidget
+
+	// Vtk memory management :
+	// m_QVtkWidget deletes m_Renderer
+	// m_Renderer deletes the props
+	// the props delete the others
 }
 
 
@@ -146,7 +154,7 @@ void QVtkFigure::Save()
 void QVtkFigure::Close()
 {
 	// inform Taskhandler.m_FigureRecord to delete this figure
-	emit(QVtkFigureClosed());
+	emit(UserCloseFigure());
 }
 
 
@@ -225,6 +233,8 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 		QString tempText = "<" + PropInfo.Name+ ">";
 
 		this->m_Renderer->AddViewProp(PropInfo.Prop);
+
+		PropInfo.Prop->Delete();
 
 		m_MainWindow->AddPropMenu(this, &PropInfo);
 
@@ -387,7 +397,7 @@ quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* Volu
 	return PropInfo.Handle;
 }
 
-vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, \
+vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty,
 	                                  QString RenderMethord)
 {
 	// fast but limited renderer: samples volume down
@@ -499,9 +509,9 @@ vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(double DataRange[2])
 
 
 //======================================= Show Mesh ==============================================================
-quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color)
+quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 {
-	auto Prop = this->CreatePloyMeshProp(MeshData, Color);
+	auto Prop = this->CreatePloyMeshProp(MeshData);
 
 	PropInfomration PropInfo;
 
@@ -517,43 +527,32 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color)
 }
 
 
-vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData, QString Color)
+vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* Mesh)
 {
 	auto MeshMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 
-	auto p = new int[3];
-
-/*	// read and set labels, if available
-
-	vtkDataArray* labels;
-
-		// set labels as scalar data to the points
-		MeshData->GetPointData()->SetScalars(labels);
-		
-		// map scalars to colors
-		SurfMapper->ScalarVisibilityOn();
-		SurfMapper->SetScalarRange(labels->GetRange());
-
-	// build and set lut
-	if (colorReader->GetSerializer() != NULL) 
-	{
-		vtkColorTransferFunction *colorLut = colorReader->GetSerializer()->GetColorTransferFunction();
-		SurfMapper->SetLookupTable(colorLut);
-	}
-	else 
-	{
-		vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
-		lut->SetHueRange(0.6667, 0);
-		SurfMapper->SetLookupTable(lut);
-	}
-
-*/
-	MeshMapper->SetInputData(MeshData);
+	MeshMapper->SetInputData(Mesh);
 	
+	Mesh->Delete();
+
 	auto MeshProp = vtkActor::New();
 	MeshProp->SetMapper(MeshMapper);
 
-	MeshData->Delete();
+	double ColorValue[3] = { 1, 1, 1 }; //white default;
+
+	auto FiledPtr = Mesh->GetFieldData();
+
+	auto Num = FiledPtr->GetNumberOfArrays();
+	if (Num > 0)
+	{
+		auto Name = QString(FiledPtr->GetArrayName(0));
+		if (Name == "Color")
+		{
+			FiledPtr->GetArray(0)->GetTuple(0, ColorValue);
+		}
+	}
+
+	MeshProp->GetProperty()->SetColor(ColorValue);
 
 	return MeshProp;
 }

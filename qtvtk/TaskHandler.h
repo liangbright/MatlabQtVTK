@@ -96,6 +96,21 @@ typedef enum
 } VtkDataTypeEnum;
 
 
+class RGBColor
+{
+public:
+	QString Name;
+	double Value[3];
+public:
+	RGBColor()
+	{
+		Name = "white";
+		Value[0] = 1;
+		Value[1] = 1;
+		Value[2] = 1;
+	}
+};
+
 class TaskHandler : public QObject
 {
 	Q_OBJECT;
@@ -114,6 +129,8 @@ private:
 	QTime m_time;
 
 	quint64 m_FigureCounter;
+
+	QMap<QString, RGBColor> m_RBGColorTable;
 
 public:
 	TaskHandler();
@@ -135,6 +152,8 @@ private:
 
 	QVtkFigure* GetQVtkFigure(quint64 FigureHandle);
 
+	void CreateRBGColorTable();
+	bool GetRBGColorByName(QString ColorName, double* Value);
 
 	//------------- Read Data From File ---------------------------------------------//
 

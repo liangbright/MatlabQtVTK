@@ -4,10 +4,12 @@
 #include <qobject.h>
 #include <qstring.h>
 #include <QTime>
+#include <QMap>
 
+#include <QVTKWidget.h>
 #include <vtkProp.h>
 #include <vtkPolyData.h>
-#include <QVTKWidget.h>
+#include <vtkLookupTable.h>
 
 //#include <ctime>
 #include <unordered_map>
@@ -15,6 +17,7 @@
 #include "QVtkFigureMainWindow.h"
 
 class vtkVolumeProperty;
+//class vtkLookupTable;
 
 class PropInfomration
 {
@@ -50,6 +53,8 @@ private:
 
 	QTime  m_time;
 
+
+
 public:
 	QVtkFigure(quint64 Handle);
 	~QVtkFigure();
@@ -72,20 +77,28 @@ public:
 	quint64 PlotPoint(vtkPoints* Point);
 	vtkProp* CreatePointProp(vtkPoints* Point);
 
-	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
-	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
-	vtkVolumeProperty* GetDefaultVolumeProperty(double DataRange[2]);
-	QString GetDefaultRenderMethod();
+	//---------------------------------------------------------------------
 
-	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData, QString Color);
-	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData, QString Color);
+	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
+
+	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
+
+	vtkVolumeProperty* GetDefaultVolumeProperty(double DataRange[2]);
+
+	QString GetDefaultRenderMethod();
+	//----------------------------------------------------------------------
+
+	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData);
+
+	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData);
+	//----------------------------------------------------------------------
 
 	vtkRenderWindow* GetRenderWindow();
 
 	vtkRenderer* GetRenderer();
 
 signals:
-	void QVtkFigureClosed();
+	void UserCloseFigure();
 
 public slots:
 
