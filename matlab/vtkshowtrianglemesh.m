@@ -1,16 +1,16 @@
-function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh)
+function [Handle, Result] = vtkshowtrianglemesh(FigureHandle, Mesh)
 
 Handle=[];
 Result=[];
 
-if isa(Mesh, 'PolyMeshClass')
-    disp('Warning: Input Mesh may not be a PolyMesh @ vtkshowpolymesh')
+if isa(Mesh, 'TriangleMeshClass')
     MeshFile=Mesh.GetMesh();
 else
-    MeshFile=Mesh;    
+    MeshFile=Mesh;
+    disp('Warning: Input Mesh may not be a TriangleMesh @ vtkshowtrianglemesh')
 end
 %%
-Command='vtkshowpolymesh';
+Command='vtkshowtrianglemesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 ResultFileName='Result.json';
@@ -22,34 +22,32 @@ DataFileType='vector';
 PointDataFileName='PointData.vector';
 PointDataType='double';
 
-CellDataFileName='CellData.vector';
-CellDataType='int64';
+TriangleDataFileName='TriangleData.vector';
+TriangleDataType='int64';
 
-CellNum=length(MeshFile.Cell);
+[~, TriangleNum]=size(MeshFile.Triangle);
 
 % change index to start from 0 (c++, vtk), in matlab it starts from 1.
-for k=1:CellNum
-    MeshFile.Cell{k}=MeshFile.Cell{k}-1;
-end
-
-CellNum=num2str(int64(CellNum), '%d');
+MeshFile.Triangle=MeshFile.Triangle-1;
 
 PointNum=num2str(int64(PointNum), '%d');
-%----------------------------------------------------------------------------
+
+TriangleNum=num2str(int64(TriangleNum), '%d');
+
 Task.Command=Command;
 Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
-           {'PointNum', PointNum}, ...          
-           {'PointDataFileName', PointDataFileName}, ...
+           {'PointNum', PointNum}, ...
            {'PointDataType', PointDataType}, ...
-           {'CellNum', CellNum}, ...
-           {'CellDataFileName', CellDataFileName},...
+           {'PointDataFileName', PointDataFileName}, ...
+           {'TriangleNum', TriangleNum}, ...
+           {'TriangleDataFileName', TriangleDataFileName},...
            {'ResultFileName', ResultFileName}};
 
 Task.Data={{PointDataFileName, DataFileType, PointDataType, MeshFile.Point},...
-           {CellDataFileName, DataFileType, CellDataType, MeshFile.Cell}};
+           {TriangleDataFileName, DataFileType, TriangleDataType, MeshFile.Triangle}};
 
 %%       
 Client = MatlabClientClass;       

@@ -53,6 +53,13 @@ end
 end
 
 
+function Mesh=GetMesh(this)
+Mesh.Point=this.Point;
+Mesh.PointGlobalIdxList=this.PointGlobalIdxList;
+Mesh.Triangle=this.Triangle;
+Mesh.TriangleGlobalIdxList=this.TriangleGlobalIdxList;
+end
+
 function Clear(this)
     
 this.Point=[];
@@ -66,13 +73,9 @@ end
 %===============================================================================================================
 function InitializeFromPolyMesh(this, PolyMesh)
 
-if ~strcmp(this.IndexTypeInCell, 'Local')
-    PolyMesh.ChangeIndexFromGlobalToLocal();
-end
-
 PolyMeshCellNum=length(PolyMesh.Cell);
 
-this.Point=PolyMesh.Point([2,3,4],:);
+this.Point=PolyMesh.Point;
 
 this.PointGlobalIdxList=PolyMesh.PointGlobalIdxList;
 
@@ -86,24 +89,20 @@ for k=1:PolyMeshCellNum
     Cell_k=PolyMesh.Cell{k};
     
     L_k=length(Cell_k);
-    if  L_k > 4 % not a Triangle
+    if  L_k > 3 % not a Triangle
     
-        % 1,2,3 -> cell_k_1
-        % 3,4,1 -> cell_k_2
-    
-        tempTriangle{1}={Cell_k(2), Cell_k(3), Cell_k(4)};
-        tempTriangle{2}={Cell_k(4), Cell_k(5), Cell_k(2)};
+        tempTriangle=SplitPolyCellToTriangle(Cell_k);
         
-        for n=1:2
+        for n=1:length(tempTriangle)
             TriangleCounter=TriangleCounter+1;    
             this.Triangle(:, TriangleCounter)=tempTriangle{n};
             this.TriangleGlobalIdxList(TriangleCounter)=PolyMesh.CellGlobalIdxList(k);
         end
             
-    elseif L_k == 4
+    elseif L_k == 3
         
          TriangleCounter=TriangleCounter+1;    
-         this.Triangle(:, TriangleCounter)=Cell_k([2,3,4]);        
+         this.Triangle(:, TriangleCounter)=Cell_k;        
     else
         disp('invalid polymesh @ ConvertFromPolyMesh')
         
@@ -116,6 +115,8 @@ end
 this.Triangle=this.Triangle(:,1:TriangleCounter);
 this.TriangleGlobalIdxList=this.TriangleGlobalIdxList(:,1:TriangleCounter);
 end
+
+
 %===============================================================================================================
 end
 end

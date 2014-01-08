@@ -53,6 +53,10 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowpolymesh);
 
+	Commmand = "vtkshowtrianglemesh";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowtrianglemesh);
+
 	Commmand = "vtkdeleteprop";
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkdeleteprop);
@@ -732,7 +736,7 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 	it = TaskObject.find("PointNum");
 	if (it != TaskObject.end())
 	{
-		PointNum = it.value().toInt();
+		PointNum = it.value().toString().toInt();
 	}
 	else
 	{
@@ -740,6 +744,19 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 	
+	// get PointDataType ------------------------------------------------------
+	QString PointDataType = 0;
+	it = TaskObject.find("PointDataType");
+	if (it != TaskObject.end())
+	{
+		PointDataType = it.value().toString();
+	}
+	else
+	{
+		qWarning("PointDataType is unknown");
+		return false;
+	}
+
 	// get PointDataFileName  ------------------------------------------------------
 	QString PointDataFileName;
 	it = TaskObject.find("PointDataFileName");
@@ -758,7 +775,7 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 	it = TaskObject.find("CellNum");
 	if (it != TaskObject.end())
 	{
-		CellNum = it.value().toInt();
+		CellNum = it.value().toString().toInt();
 	}
 	else
 	{
@@ -789,9 +806,13 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data from " << FullFileName_PointData << ", and " << FullFileName_CellData;
 
-	auto IsReadOK = this->ReadPolyMeshData(FullFileName_PointData, PointNum, FullFileName_CellData, CellNum, MeshData);
+	auto IsReadOK = this->ReadPolyMeshData(FullFileName_PointData, PointNum, PointDataType, 
+		                                   FullFileName_CellData, CellNum, 
+										   MeshData);
 	if (IsReadOK == false)
 	{
+		qDebug() << "Can not load Mesh Data";
+
 		return false;
 	}
 
@@ -801,6 +822,188 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	auto PropHandle = Figure->ShowPloyMesh(MeshData, MeshColor);
 
+	//---------------------- Write Result ----------------------------------------//
+
+	std::vector<NameValuePair> PairList;
+
+	NameValuePair Pair;
+
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	Pair.Name = "PropHandle";
+	Pair.Value = QString::number(PropHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFullPath(), ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+
+	return true;
+}
+
+
+bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
+{
+	QFile TaskFile(TaskInfo.GetFullFileNameAndPath());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+	//----------------------------------------------------------//
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some Information from Task.json ----------------------------------//
+
+	// get ResultFileName ----------------------------------------------------------
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	//get FigureHandle ----------------------------------------------------------
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//check FigureHandle ----------------------------------------------------------
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	// get PointNum ------------------------------------------------------
+	int PointNum = 0;
+	it = TaskObject.find("PointNum");
+	if (it != TaskObject.end())
+	{
+		PointNum = it.value().toString().toInt();
+	}
+	else
+	{
+		qWarning("PointNum is unknown");
+		return false;
+	}
+
+	// get PointDataType ------------------------------------------------------
+	QString PointDataType = 0;
+	it = TaskObject.find("PointDataType");
+	if (it != TaskObject.end())
+	{
+		PointDataType = it.value().toString();
+	}
+	else
+	{
+		qWarning("PointDataType is unknown");
+		return false;
+	}
+
+	// get PointDataFileName  ------------------------------------------------------
+	QString PointDataFileName;
+	it = TaskObject.find("PointDataFileName");
+	if (it != TaskObject.end())
+	{
+		PointDataFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("PointDataFileName is unknown");
+		return false;
+	}
+
+	// get TriangleNum ------------------------------------------------------
+	int TriangleNum = 0;
+	it = TaskObject.find("TriangleNum");
+	if (it != TaskObject.end())
+	{
+		TriangleNum = it.value().toString().toInt();
+	}
+	else
+	{
+		QString FailureInfo = "TriangleNum is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	// get MeshColor ----------------------------------------------------------
+	QString MeshColor = 'r';
+
+	// get TriangleDataFileName  ------------------------------------------------------
+	QString TriangleDataFileName;
+	it = TaskObject.find("TriangleDataFileName");
+	if (it != TaskObject.end())
+	{
+		TriangleDataFileName = it.value().toString();
+	}
+	else
+	{
+		QString FailureInfo = "TriangleDataFileName is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	QString FullFileName_PointData = TaskInfo.GetFullPath() + PointDataFileName;
+	QString FullFileName_TriangleData = TaskInfo.GetFullPath() + TriangleDataFileName;
+
+	vtkPolyData* MeshData = nullptr;
+
+	qDebug() << "Read Mesh Data from " << FullFileName_PointData << ", and " << FullFileName_TriangleData;
+
+	auto IsReadOK = this->ReadTriangleMeshData(FullFileName_PointData, PointNum, PointDataType,
+                                    	  	   FullFileName_TriangleData, TriangleNum,
+		                                       MeshData);
+	if (IsReadOK == false)
+	{
+		QString FailureInfo = "Can not load Mesh Data";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	qDebug() << "Read Mesh Data is loaded";
+
+	//---------------------- Show Mesh ----------------------------------------//
+
+	auto PropHandle = Figure->ShowPloyMesh(MeshData, MeshColor);
+
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run  Figure->ShowPloyMesh";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 	//---------------------- Write Result ----------------------------------------//
 
 	std::vector<NameValuePair> PairList;
@@ -957,8 +1160,7 @@ void TaskHandler::ReadExampleTaskFile(const TaskInformation& TaskInfo)
 // DataFileFullNameAndPath, PointNum, MatlabDataType
 //Output:
 //  PointData: nullptr or pointer to data
-bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, int PointNum, QString MatlabDataType, \
-	                            vtkPoints*& PointData)
+bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, int PointNum, QString DataType, vtkPoints*& PointData)
 {
 	//---------------------------------------------------------------------------------------//
 	// defalut value
@@ -978,11 +1180,11 @@ bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, int PointNum, Q
 
 	qint64 BypesofPointData = 0;
 
-	if (MatlabDataType == m_MatlabDataTypeList.Double)
+	if (DataType == m_MatlabDataTypeList.Double)
 	{
 		BypesofPointData = qint64(PointNum*3*8); // 3d point
 	}
-	else if (MatlabDataType == m_MatlabDataTypeList.Single)
+	else if (DataType == m_MatlabDataTypeList.Single)
 	{
 		BypesofPointData = qint64(PointNum*3*4);
 	}
@@ -999,13 +1201,13 @@ bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, int PointNum, Q
 	//---------------------------------------------------------------------------------------//
 	auto Point = vtkPoints::New();
 	
-	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(MatlabDataType);
+	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(DataType);
 
 	Point->SetDataType(VtkDataType);
 
 	Point->SetNumberOfPoints(PointNum);
 
-	if (MatlabDataType == m_MatlabDataTypeList.Double)
+	if (DataType == m_MatlabDataTypeList.Double)
 	{
 		double pos[3];
 
@@ -1022,7 +1224,7 @@ bool TaskHandler::ReadPointData(QString DataFileFullNameAndPath, int PointNum, Q
 			Point->InsertPoint(i, pos);
 		}
 	}
-	else if (MatlabDataType == m_MatlabDataTypeList.Single)
+	else if (DataType == m_MatlabDataTypeList.Single)
 	{
 		float pos[3];
 
@@ -1149,56 +1351,14 @@ bool TaskHandler::ReadImageData(QString DataFileFullNameAndPath, int ImageSize[3
 }
 
 
-//=================================ReadPolyMeshData=============================================
-// Each cell of the mesh must be a polygon (at least a triangle, not a point or a line)
-// FullFileName_PointData is text file
-// PointID, x, y, z
-// FullFileName_PointData is text file
-// CellID, Point1ID, Point2ID, Point3ID, ... (at least three points)
-bool TaskHandler::ReadPolyMeshData(QString FullFileName_PointData, int PointNum, \
-	                               QString FullFileName_CellData, int CellNum, \
-	                               vtkPolyData*& MeshData)
+bool TaskHandler::ReadPolyMeshData_From_INP(QString FullFileName, vtkPolyData*& MeshData)
 {
-
-	vtkPoints* PointData = nullptr;
-
-	std::map<int, int> PointIndexTable;
-
-	auto IsOK = this->ReadPolyMeshPointData(FullFileName_PointData, PointNum, PointData, PointIndexTable);
-
-	if (IsOK == false)
-	{
-		return false;
-	}
-
-	vtkCellArray* CellData = nullptr;
-
-	auto IsGood = this->ReadPolyMeshCellData(FullFileName_CellData, CellNum, PointIndexTable, CellData);
-
-	if (IsGood == false)
-	{
-		return false;
-	}
-
-	MeshData = vtkPolyData::New();
-
-	MeshData->SetPoints(PointData);
-	PointData->Delete();
-
-	MeshData->SetPolys(CellData);
-	CellData->Delete();
-
-	return true;
-}
-
-bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, \
-	                                    vtkPoints*& PointData, std::map<int, int>& PointIndexTable)
-{
+	/*
 	//---------------------------------------------------------------------------------------//
 	// Initialize the output
-	PointData = nullptr;
+	MeshData = nullptr;
 	//------------------------------ Read Point ----------------------------------------------//
-	
+
 	QFile DataFile(FullFileName);
 
 	if (!DataFile.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -1216,7 +1376,7 @@ bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, \
 	Point->SetNumberOfPoints(PointNum);
 
 	QTextStream in(&DataFile);
-	while (!in.atEnd()) 
+	while (!in.atEnd())
 	{
 		QString line = in.readLine();  // id, x, y, z
 		auto List = line.split(",");
@@ -1229,7 +1389,7 @@ bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, \
 
 		// weird: output 0
 		//auto point_input_id = List.at(0).toInt();
-		
+
 		auto point_input_id = int(List.at(0).toDouble());
 
 		//qDebug() << "point_input_id: " << point_input_id;
@@ -1237,29 +1397,21 @@ bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, \
 		PointIndexTable[point_input_id] = PointCounter;
 
 		auto x = List.at(1).toDouble();
-   		auto y = List.at(2).toDouble();
-    	auto z = List.at(3).toDouble();
+		auto y = List.at(2).toDouble();
+		auto z = List.at(3).toDouble();
 
 		Point->InsertPoint(PointCounter, x, y, z);
-		
+
 		PointCounter += 1;
 	}
 
 	PointData = Point;
-
-	return true;
-}
-
-
-bool TaskHandler::ReadPolyMeshCellData(QString FullFileName, int CellNum, const std::map<int, int>& PointIndexTable, \
-	                                   vtkCellArray*& CellData)
-{
 	//---------------------------------------------------------------------------------------//
 	// Initialize the output
 	CellData = nullptr;
 
-	//------------------------------ Read Point ----------------------------------------------//
-	
+	//------------------------------ Read Cell ----------------------------------------------//
+
 	QFile DataFile(FullFileName);
 
 	if (!DataFile.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -1301,10 +1453,298 @@ bool TaskHandler::ReadPolyMeshCellData(QString FullFileName, int CellNum, const 
 	}
 
 	CellData = Cell;
+	*/
+	return true;
+}
+
+//=================================ReadPolyMeshData=============================================
+// Each cell of the mesh must be a polygon (at least a triangle, not a point or a line)
+// FullFileName_PointData is text file
+// PointID, x, y, z
+// FullFileName_PointData is text file
+// CellID, Point1ID, Point2ID, Point3ID, ... (at least three points)
+bool TaskHandler::ReadPolyMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
+	                               QString FullFileName_CellData, int CellNum,
+	                               vtkPolyData*& MeshData)
+{
+
+	vtkPoints* PointData = nullptr;
+
+	auto IsOK = this->ReadPolyMeshPointData(FullFileName_PointData, PointNum, PointDataType, PointData);
+
+	if (IsOK == false)
+	{
+		return false;
+	}
+
+	vtkCellArray* CellData = nullptr;
+
+	auto IsGood = this->ReadPolyMeshCellData(FullFileName_CellData, CellNum, CellData);
+
+	if (IsGood == false)
+	{
+		PointData->Delete();
+
+		return false;
+	}
+
+	MeshData = vtkPolyData::New();
+
+	MeshData->SetPoints(PointData);
+	PointData->Delete();
+
+	MeshData->SetPolys(CellData);
+	CellData->Delete();
 
 	return true;
 }
 
+
+bool TaskHandler::ReadPolyMeshPointData(QString FullFileName, int PointNum, QString DataType, vtkPoints*& PointData)
+{
+	//---------------------------------------------------------------------------------------//
+	// Initialize the output
+	PointData = nullptr;
+	//------------------------------ Read Point ----------------------------------------------//
+	
+	QFile DataFile(FullFileName);
+
+	if (!DataFile.open(QIODevice::ReadOnly))
+	{
+		qWarning() << "Couldn't open point data file:" << FullFileName;
+		return false;
+	}
+	//-------------------------------------------------------------------
+	qint64 BypesofDataFile = DataFile.size();
+
+	qint64 BypesofPointData = 0;
+
+	if (DataType == m_MatlabDataTypeList.Double)
+	{
+		BypesofPointData = qint64(PointNum * 24); // 3d point
+	}
+	else if (DataType == m_MatlabDataTypeList.Single)
+	{
+		BypesofPointData = qint64(PointNum * 12);
+	}
+	else
+	{
+		BypesofPointData = 0;
+	}
+
+	if (BypesofDataFile != BypesofPointData)
+	{
+		qWarning("Data file size is not equal to point-set size");
+		return false;
+	}
+	//---------------------------------------------------------------------------------------//
+	auto Point = vtkPoints::New();
+
+	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(DataType);
+
+	Point->SetDataType(VtkDataType);
+
+	Point->SetNumberOfPoints(PointNum);
+
+	if (DataType == m_MatlabDataTypeList.Double)
+	{
+		double pos[3] = { 0, 0, 0 };
+
+		for (int i = 0; i < PointNum; ++i)
+		{
+			auto BypesofPos = DataFile.read((char *)pos, 24);
+
+			if (BypesofPos != 24)
+			{
+				Point->Delete();
+				return false;
+			}
+
+			Point->InsertPoint(i, pos);
+		}
+	}
+	else if (DataType == m_MatlabDataTypeList.Single)
+	{
+		float pos[3] = { 0, 0, 0 };
+
+		for (int i = 0; i < PointNum; ++i)
+		{
+			auto BypesofPos = DataFile.read((char *)pos, 12);
+
+			if (BypesofPos != 12)
+			{
+				Point->Delete();
+				return false;
+			}
+
+			Point->InsertPoint(i, pos);
+		}
+	}
+
+	PointData = Point;
+
+	return true;
+}
+
+//============================ ReadPolyMeshCellData ===================================
+// datatype must be int64  (long long)
+//
+bool TaskHandler::ReadPolyMeshCellData(QString FullFileName, int CellNum, vtkCellArray*& CellData)
+{
+	//---------------------------------------------------------------------------------------//
+	// Initialize the output
+	CellData = nullptr;
+
+	//------------------------------ Read Cell ----------------------------------------------//
+	
+	QFile DataFile(FullFileName);
+
+	if (!DataFile.open(QIODevice::ReadOnly))
+	{
+		qWarning() << "Couldn't open point data file:" << FullFileName;
+		return false;
+	}
+
+	auto Cell = vtkCellArray::New();
+
+	Cell->SetNumberOfCells(CellNum);
+	//-----------------------------------
+
+	qint64 PointNum = 0;
+
+	qint64 PointIndex = 0;
+
+    for (int i = 0; i < CellNum; ++i)
+	{	
+		auto Bypes = DataFile.read((char *)&PointNum, 8);
+		if (Bypes != 8)
+		{
+			Cell->Delete();
+			return false;
+		}
+
+		Cell->InsertNextCell(PointNum);
+
+		for (int n = 0; n < PointNum; ++n)
+		{
+			auto BypesofRead = DataFile.read((char *)&PointIndex, 8);
+			if (BypesofRead != 8)
+			{
+				Cell->Delete();
+				return false;
+			}
+			
+			Cell->InsertCellPoint(PointIndex);
+		}
+	}
+	    
+	Cell->Squeeze();
+
+	CellData = Cell;
+
+	return true;
+}
+
+//============================  ReadTriangleMeshData ==============================================
+// PointData:  double or float defined by PointDataType
+// TriangleData: uint64
+bool TaskHandler::ReadTriangleMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
+	                                   QString FullFileName_TriangleData, int TriangleNum,
+									   vtkPolyData*& MeshData)
+{
+	MeshData = nullptr;
+
+	vtkPoints* PointData = nullptr;
+
+	auto IsOK = this->ReadPolyMeshPointData(FullFileName_PointData, PointNum, PointDataType, PointData);
+
+	if (IsOK == false)
+	{
+		return false;
+	}
+
+	vtkCellArray* TriangleData = nullptr;
+
+	auto IsGood = this->ReadTriangleMeshTriangleData(FullFileName_TriangleData, TriangleNum, TriangleData);
+
+	if (IsGood == false)
+	{
+		PointData->Delete();
+
+		return false;
+	}
+
+	MeshData = vtkPolyData::New();
+
+	MeshData->SetPoints(PointData);
+	PointData->Delete();
+
+	MeshData->SetPolys(TriangleData);
+	TriangleData->Delete();
+
+	return true;
+
+}
+
+
+//============================ ReadTriangleMeshCellData ===================================
+// datatype must be int64  (long long)
+//
+bool TaskHandler::ReadTriangleMeshTriangleData(QString FullFileName, int TriangleNum, vtkCellArray*& TriangleData)
+{
+	//---------------------------------------------------------------------------------------//
+	// Initialize the output
+	TriangleData = nullptr;
+
+	//------------------------------ Read Triangle ----------------------------------------------//
+
+	QFile DataFile(FullFileName);
+
+	if (!DataFile.open(QIODevice::ReadOnly))
+	{
+		qWarning() << "Couldn't open point data file:" << FullFileName;
+		return false;
+	}
+	//--------------------------------------------------------------
+	qint64 BypesofDataFile = DataFile.size();
+
+	if (BypesofDataFile != TriangleNum * 8 * 3)
+	{
+		qWarning("Data file size is not equal to input size - cell");
+		return false;
+	}
+	//-----------------------------------------------------------
+
+	auto Triangle = vtkCellArray::New();
+
+	Triangle->SetNumberOfCells(TriangleNum);
+	//-----------------------------------
+
+	qint64 PointIndex = 0;
+
+	for (int i = 0; i < TriangleNum; ++i)
+	{
+		Triangle->InsertNextCell(3);
+
+		for (int n = 0; n < 3; ++n)
+		{
+			auto BypesofRead = DataFile.read((char *)&PointIndex, 8);
+			if (BypesofRead != 8)
+			{
+				Triangle->Delete();
+				return false;
+			}
+
+			Triangle->InsertCellPoint(PointIndex);
+		}
+	}
+
+	Triangle->Squeeze();
+
+	TriangleData = Triangle;
+
+	return true;
+}
 
 
 VtkDataTypeEnum TaskHandler::MapMatlabDataTypeToVtkDataType(QString MatlabDataType)

@@ -138,19 +138,25 @@ private:
 
 	//------------- Read Data From File ---------------------------------------------//
 
-	bool ReadPointData(QString FullFileName, int PointNum, QString MatlabDataType, vtkPoints*& PointData);
+	bool ReadPointData(QString FullFileName, int PointNum, QString DataType, vtkPoints*& PointData);
 
 	bool ReadImageData(QString FullFileName, int ImageSize[3], QString DataType, vtkImageData*& ImageData);
 	
-	bool ReadPolyMeshData(QString FullFileName_PointData, int PointNum, \
-		                  QString FullFileName_CellData, int CellNum, \
-		                  vtkPolyData*& PolyData);
+	bool ReadPolyMeshData_From_INP(QString FullFileName, vtkPolyData*& MeshData);
 
-	bool ReadPolyMeshPointData(QString FullFileName, int PointNum, \
-		                       vtkPoints*& PointData, std::map<int, int>& PointIndexTable);
+	bool ReadPolyMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
+		                  QString FullFileName_CellData,  int CellNum,
+						  vtkPolyData*& MeshData);
+
+	bool ReadPolyMeshPointData(QString FullFileName, int PointNum, QString PointDataType, vtkPoints*& PointData);
  
-	bool ReadPolyMeshCellData(QString FullFileName, int CellNum, const std::map<int, int>& PointIndexTable, \
-		                      vtkCellArray*& CellData);
+	bool ReadPolyMeshCellData(QString FullFileName,  int CellNum,  vtkCellArray*& CellData);
+
+	bool ReadTriangleMeshData(QString FullFileName_PointData, int PointNum, QString PointDataType,
+	                       	  QString FullFileName_TriangleData, int TriangleNum,
+							  vtkPolyData*& MeshData);
+
+	bool ReadTriangleMeshTriangleData(QString FullFileName, int TriangleNum, vtkCellArray*& TriangleData);
 
 	//----------------------- process matlab command -------------------//
 
@@ -167,6 +173,9 @@ private:
 	//---------------------------------------
 
 	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);
+	//---------------------------------------
+	
+	bool run_vtkshowtrianglemesh(const TaskInformation& TaskInfo);
 	//---------------------------------------
 
 	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);

@@ -8,20 +8,19 @@ tic
 PolyMesh = ReadPolyMeshDataFile_inp(FullFileName);
 toc
 %%
-tic
-IsOK1 = PolyMesh.CheckConsistency();
-toc
-%%
-tic
-PolyMesh.ChangeIndexFromGlobalToLocal();
-toc
-%%
 TriangleMesh=TriangleMeshClass;
-
+tic
 TriangleMesh.InitializeFromPolyMesh(PolyMesh);
+toc
 %%
 tic
 [FigureHandle, Result1] = vtkfigure();
 toc
 %%
+tic
 [PropHandle, Result] = vtkshowpolymesh(FigureHandle, PolyMesh);
+toc
+%%
+tic
+[Handle, Result] = vtkshowtrianglemesh(FigureHandle, TriangleMesh);
+toc

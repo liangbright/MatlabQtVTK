@@ -1,6 +1,7 @@
 function IsSucess = WriteTaskData(TaskData, FilePath)
 
-%{{DataFileName, FileType, DataType, Data}};
+% TaskData={{DataFileName, FileType, DataType, Data}, ...};
+% FilePath='X:/XXX/';
 
 IsSucess=0;
 
@@ -18,16 +19,16 @@ for n=1:FileNum
     switch FileType
         
         case 'txt'
-            IsSucess=WriteTaskData_txt(FullFileName, Data);
+            IsSucess=WriteVectorDataTotxt(FullFileName, Data);
 
         case 'vector'
-            IsSucess=WriteTaskData_vector(FullFileName, DataType, Data);
+            IsSucess=WriteVectorDataTobinary(FullFileName, DataType, Data);
 
         case 'matrix'
-            IsSucess=WriteTaskData_matrix(FullFileName, DataType, Data);
+            IsSucess=WriteMatrixDataTobinary(FullFileName, DataType, Data);
 
         case 'image'
-            IsSucess=WriteTaskData_image(FullFileName, DataType, Data);
+            IsSucess=WriteImageDataTobinary(FullFileName, DataType, Data);
             
         otherwise
             disp('unknown FileType')
@@ -38,12 +39,16 @@ end
 
 end
 
-function IsSucess=WriteTaskData_txt(FullFileName, Data)
+function IsSucess=WriteVectorDataTotxt(FullFileName, Data)
 % Data format:
-% Data={[1.234, 2.345, 4.567, 1.112], [1.2, 2.5, 4.7, 2.1]}
-% or
+% case 1:
 % Data=[1.234, 2.345, 4.567, 1.112; 1.2, 2.5, 4.7, 2.1];
-% Each item Data{n} will occupy a line in the text file
+% Each colume is a vector, and it will occupy a line in the text file
+% case 2:
+% Data={[1.234, 2.345, 4.567, 1.112], [1.2, 2.5, 4.7, 2.1]}
+% Each item Data{n} is a vector, and it will occupy a line in the text file
+% Output
+% text file (*.txt)
 
 IsSucess=0;
 
@@ -89,26 +94,47 @@ IsSucess=1;
 end
 
 
-function IsSucess=WriteTaskData_vector(FullFileName, DataType, Data)
+function IsSucess=WriteVectorDataTobinary(FullFileName, DataType, Data)
+% Data format:
+% case 1:
+% Data=[1.234, 2.345, 4.567, 1.112; 1.2, 2.5, 4.7, 2.1];
 % each colume of Data is a vector
-% output is binary file
+% Data is saved as Data(:)
+% case 2:
+% Data={[1.234, 2.345, 4.567, 1.112], [1.2, 2.5, 4.7, 2.1]}
+% Each item Data{n} is a vector saved as [length(item), item(1), item(2)]
+% Data is saved as [[2, item(1), item(2)] [3, item(1), item(2), item(3)] ...]
+% Output:
+% output is binary file (*.vector)
 
 IsSucess=0;
 
-fid = fopen(FullFileName, 'w');
-    
-if fid == -1
-    
-    disp('can not open feature file')
-        
-    fclose(fid);
-        
-    return
-
+IsCell=iscell(Data);
+if IsCell
+    VectorNum=length(Data);
+else
+    [~, VectorNum]=size(Data);
+    %Data=cast(Data,DataType);
 end
 
-fwrite(fid, Data(:), DataType);
-    
+fid = fopen(FullFileName, 'w');
+
+if fid == -1    
+    disp('can not open vector file')        
+    fclose(fid);        
+    return
+end
+
+if ~IsCell
+    fwrite(fid, Data(:), DataType);
+else
+    for k=1:VectorNum 
+         temp=[length(Data{k}) Data{k}];
+         %temp=cast(temp,DataType);
+         fwrite(fid, temp(:), DataType);
+    end
+end
+
 fclose(fid);
     
 IsSucess=1;
@@ -116,9 +142,13 @@ IsSucess=1;
 end
 
 
-function IsSucess=WriteTaskData_matrix(FullFileName, DataType, Data)
-% if Data is cell, then each item Data{n} is a matrix, and will be saved as Data{n}(:)
-% output is binary file
+function IsSucess=WriteMatrixDataTobinary(FullFileName, DataType, Data)
+% Input format:
+% case 1:
+% Data is cell, 
+% each item Data{n} is a matrix  saved as Data{n}(:)
+% output:
+% binary file(*.matrix)
 
 IsSucess=0;
 
@@ -144,11 +174,11 @@ IsSucess=1;
 
 end
 
-function IsSucess=WriteTaskData_image(FullFileName, DataType, Data)
-% output is binary file
+function IsSucess=WriteImageDataTobinary(FullFileName, DataType, Data)
+% output is binary file (*.image)
 
 if ~ismatrix(Data)
-    disp('Input Data to WriteTaskData_image must be matrix')
+    disp('Input Data to WriteImageData_binary must be matrix')
 end
 
 [Ly, Lx, Lz]=size(Data);
