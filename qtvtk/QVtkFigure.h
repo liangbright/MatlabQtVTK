@@ -7,29 +7,42 @@
 #include <QMap>
 
 #include <QVTKWidget.h>
-#include <vtkProp.h>
 #include <vtkPolyData.h>
-#include <vtkLookupTable.h>
 
 //#include <ctime>
 #include <unordered_map>
 
 #include "QVtkFigureMainWindow.h"
 
+class vtkProp;
 class vtkVolumeProperty;
-//class vtkLookupTable;
+class vtkImageProperty;
+class vtkPlane;
+
+class DataInfomration
+{
+public:
+	QString Name;
+
+	double Range[2];
+
+};
 
 class PropInfomration
 {
 public:
 
-	quint64  Handle = 0; //handle of the Prop
+	quint64 Handle = 0; //handle of the Prop
 
-	QString Name; //default is ""
+	QString Name;
+
+	QString NameOnMenu; //default is ""
 
 	vtkProp* Prop = nullptr;  
 
 	QMenu* PropMenu = nullptr;
+
+	vtkObject*  DataSource = nullptr;
 };
 
 
@@ -39,7 +52,7 @@ class QVtkFigure : public QObject
 
 private:
 
-	quint64 m_Handle = 0;
+	quint64 m_Handle = 0; // FigureHandle
 
 	QVtkFigureMainWindow* m_MainWindow = nullptr;
 
@@ -49,24 +62,33 @@ private:
 
 	std::unordered_map<quint64, PropInfomration> m_PropRecord;
 
-	quint64 m_PropCounter;
+	quint64 m_PropHandleCounter = 0;
 
 	QTime  m_time;
 
-
+	quint64 m_AxesHandle = 0;
 
 public:
-	QVtkFigure(quint64 Handle);
+	QVtkFigure();
 	~QVtkFigure();
+
+	void SetHandle(quint64 Handle)
+	{
+		m_Handle = Handle;
+	}
 
 	quint64 GetHandle() 
 	{
 		return m_Handle;
 	}
 
+	void SetTitle(QString Title);
+
 	void CreateMenus();
 
-	void SetTitle(QString Title);
+	vtkRenderWindow* GetRenderWindow();
+
+	vtkRenderer* GetRenderer();
 
 	void AddProp(PropInfomration PropInfo);
 
@@ -75,29 +97,40 @@ public:
 	quint64 GeneratePropHandle();
 
 	//---------------------------------------------------------------------
+	quint64 ShowAxes();
+
+	//---------------------------------------------------------------------
 
 	quint64 PlotPoint(vtkPoints* PointData);
 
 	vtkProp* CreatePointProp(vtkPoints* PointData);
+
 	//---------------------------------------------------------------------
+	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty = nullptr);
 
-	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
+	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty);
 
-	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord);
-
-	vtkVolumeProperty* GetDefaultVolumeProperty(const double DataRange[2]);
+	vtkVolumeProperty* CreateDefaultVolumeProperty(const double DataRange[2]);
 
 	QString GetDefaultRenderMethod();
+
 	//----------------------------------------------------------------------
+
+	quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty = nullptr);
+
+	vtkProp* QVtkFigure::CreateSliceOfVolumeProp(vtkImageData* VolumeData, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty);
+
+	vtkImageProperty* QVtkFigure::CreateDefaultImageProperty(const double DataRange[2]);
+	//----------------------------------------------------------------------
+
+	bool ResliceVolume(quint64 VolumePropHandle);
+
+	//---------------------------------------------------------------------
 
 	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData);
 
 	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData);
 	//----------------------------------------------------------------------
-
-	vtkRenderWindow* GetRenderWindow();
-
-	vtkRenderer* GetRenderer();
 
 signals:
 	void UserCloseFigure();

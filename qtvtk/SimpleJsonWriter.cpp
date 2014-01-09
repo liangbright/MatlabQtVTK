@@ -3,11 +3,11 @@
 #include <QTextStream>
 
 // Path: example: M:/xxx/, must end with /
-bool SimpleJsonWriter::WritePair(std::vector<NameValuePair> PairList, QString Path, QString FileName)
+bool SimpleJsonWriter::WritePair(std::vector<NameValuePair> PairList, QString FilePath, QString FileName)
 {
 	quint64 s = PairList.size();
 
-	QFile JsonFile(Path + "~temp~" + FileName);
+	QFile JsonFile(FilePath + "~temp~" + FileName);
 
 	if (!JsonFile.open(QIODevice::WriteOnly))
 	{
@@ -36,7 +36,7 @@ bool SimpleJsonWriter::WritePair(std::vector<NameValuePair> PairList, QString Pa
 	out.flush();
 	if (out.status() == QTextStream::Ok)
 	{
-		return JsonFile.rename(Path + FileName);
+		return JsonFile.rename(FilePath + FileName);
 	}
 
 	return false;

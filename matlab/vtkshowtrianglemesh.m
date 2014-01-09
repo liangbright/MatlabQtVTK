@@ -1,6 +1,5 @@
-function [Handle, Result] = vtkshowtrianglemesh(FigureHandle, Mesh, MeshColorName)
+function Result = vtkshowtrianglemesh(FigureHandle, Mesh, MeshColorName)
 
-Handle=[];
 Result=[];
 
 if isa(Mesh, 'TriangleMeshClass')
@@ -13,8 +12,6 @@ end
 Command='vtkshowtrianglemesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
-ResultFileName='Result.json';
-
 DataFileType='vector';
 
 [~, PointNum]=size(MeshFile.Point);
@@ -34,6 +31,8 @@ PointNum=num2str(int64(PointNum), '%d');
 
 TriangleNum=num2str(int64(TriangleNum), '%d');
 
+ResultFileName='Result.json';
+%---------------------------------------------------------------------------------
 Task.Command=Command;
 Task.Taskhandle=Taskhandle;
 
@@ -73,5 +72,10 @@ end
 %%
 Result=Client.ReadResult(Taskhandle, ResultFileName);
 
-Handle.PropHandle=Result.PropHandle;
-Handle.FigureHandle=Result.FigureHandle;
+if ~isfield(Result, 'FigureHandle')
+   Result.FigureHandle=[];
+end
+
+if ~isfield(Result, 'PropHandle')
+    Result.PropHandle=[];
+end

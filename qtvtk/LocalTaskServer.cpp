@@ -49,7 +49,7 @@ void LocalTaskServer::test()
 	qDebug() << "test example task read and write";
 
 	TaskInformation Task;
-	Task.Path = "M:/ExampleTasks/";
+	Task.FolderPath = "M:/ExampleTasks/";
 	Task.FolderName = "1234567890";
 	QDir dir("M:/ExampleTasks");
 	dir.mkdir(Task.FolderName);
@@ -62,11 +62,15 @@ void LocalTaskServer::test()
 
 	qDebug() << "test QVtkFigure";
 
-	auto Figure = new QVtkFigure(0);
+	auto Figure = new QVtkFigure();
+
+	Figure->SetHandle(0);
 
 	Figure->SetTitle("FigureHandle = 0");
 
 	Figure->Show();
+
+	//Figure->ShowAxes();
 
 	auto points = vtkPoints::New();
 
@@ -108,14 +112,15 @@ void LocalTaskServer::test()
 
 	double DataRange[2] = { 1, 10 };
 
-	auto VolumeProperty = Figure->GetDefaultVolumeProperty(DataRange);
+	auto VolumeProperty = Figure->CreateDefaultVolumeProperty(DataRange);
 
-	auto RenderMethod = Figure->GetDefaultRenderMethod();
-
-	auto ImageProp = Figure->ShowVolume(Image, VolumeProperty, RenderMethod);
+	auto ImageProp = Figure->ShowVolume(Image, VolumeProperty);
 
 	std::cout << "ImageProp Handle: " << ImageProp << std::endl;
 
+	// reset the camera center to object center,
+	// then add axes
+	Figure->ShowAxes();
 }
 
 LocalTaskServer::~LocalTaskServer()
@@ -232,7 +237,7 @@ std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
 	std::vector<TaskInformation> TaskList;
 
 	TaskInformation Task;
-	Task.Path = "M:/PendingTasks/";
+	Task.FolderPath = "M:/PendingTasks/";
 
 	QDir dir("M:/PendingTasks");
 	dir.setFilter(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot);
@@ -254,18 +259,18 @@ std::vector<TaskInformation> LocalTaskServer::GetAllPendingTasks()
 bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 {
 
-	QDir TaskDir(TaskInfo.Path + TaskInfo.FolderName);
+	QDir TaskDir(TaskInfo.FolderPath + TaskInfo.FolderName);
 	if (TaskDir.exists() == false)
 	{
 		qDebug() << "Strange: TaskDir does not exist";
-		qDebug() << "Task.Path:" << TaskInfo.Path;
+		qDebug() << "Task.Path:" << TaskInfo.FolderPath;
 		qDebug() << "Task.FolderName:" << TaskInfo.FolderName;
 		return false;
 	}
 
 	QString ProcessedTaskPath = "M:/ProcessedTasks/";
 
-	QString tempFolder = ProcessedTaskPath + "~" + TaskInfo.FolderName;
+	QString tempFolder = ProcessedTaskPath + "~temp~" + TaskInfo.FolderName;
 
 	QDir ProcessedTaskDir(tempFolder);
 	if (ProcessedTaskDir.exists() == true)
@@ -293,7 +298,7 @@ bool LocalTaskServer::AddProcessedTask(TaskInformation TaskInfo)
 	for (int i = 0; i < list.size(); ++i)
 	{
 		auto sourceFileName = list.at(i);
-		auto sourceFile = TaskInfo.Path + TaskInfo.FolderName + "/" + sourceFileName;
+		auto sourceFile = TaskInfo.FolderPath + TaskInfo.FolderName + "/" + sourceFileName;
 		auto destinationFile = tempFolder + "/" + sourceFileName;
 		auto tempresult = QFile::copy(sourceFile, destinationFile);
 

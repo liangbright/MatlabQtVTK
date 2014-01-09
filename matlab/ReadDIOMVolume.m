@@ -1,8 +1,8 @@
-function ImageData = ReadDIOMVolume(FullPath)
+function ImageData = ReadDIOMVolume(FilePath)
 
 ImageData=[];
 %------------------------------------------------------------------    
-AllFileName=dir(fullfile([FullPath '*.dcm']));
+AllFileName=dir(fullfile([FilePath '*.dcm']));
 Num=length(AllFileName);
 if Num == 1
     FileName=AllFileName.name;
@@ -20,13 +20,13 @@ end
     
 if iscell(FileName)
     ImageNum=length(FileName);
-    I=dicomread([FullPath FileName{1}]);
+    I=dicomread([FilePath FileName{1}]);
     [Ly, Lx]=size(I);
     ImageData=zeros(Ly,Lx,ImageNum);
     ImageData(:,:,1)=I;
     for k=2:ImageNum        
-        ImageData(:,:,k)=dicomread([FullPath, FileName{k}]);        
+        ImageData(:,:,k)=dicomread([FilePath, FileName{k}]);        
     end
 else
-    ImageData=dicomread([FullPath, FileName]);
+    ImageData=dicomread([FilePath, FileName]);
 end

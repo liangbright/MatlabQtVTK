@@ -1,4 +1,4 @@
-function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
+function Result = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
 
 %MeshColorName
 % white
@@ -15,7 +15,6 @@ function [Handle, Result] = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
 % purple
 % wheat
 
-Handle=[];
 Result=[];
 
 if isa(Mesh, 'PolyMeshClass')
@@ -28,8 +27,6 @@ end
 Command='vtkshowpolymesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
-ResultFileName='Result.json';
-
 DataFileType='vector';
 
 [~, PointNum]=size(MeshFile.Point);
@@ -42,7 +39,7 @@ CellDataType='int64';
 
 CellNum=length(MeshFile.Cell);
 
-% change index to start from 0 (c++, vtk), in matlab it starts from 1.
+% change matlab index (start from 0) to  c++/vtk index (start from 0)
 for k=1:CellNum
     MeshFile.Cell{k}=MeshFile.Cell{k}-1;
 end
@@ -50,6 +47,8 @@ end
 CellNum=num2str(int64(CellNum), '%d');
 
 PointNum=num2str(int64(PointNum), '%d');
+
+ResultFileName='Result.json';
 %----------------------------------------------------------------------------
 Task.Command=Command;
 Task.Taskhandle=Taskhandle;
@@ -90,5 +89,10 @@ end
 %%
 Result=Client.ReadResult(Taskhandle, ResultFileName);
 
-Handle.PropHandle=Result.PropHandle;
-Handle.FigureHandle=Result.FigureHandle;
+if ~isfield(Result, 'FigureHandle')
+   Result.FigureHandle=[];
+end
+
+if ~isfield(Result, 'PropHandle')
+    Result.PropHandle=[];
+end

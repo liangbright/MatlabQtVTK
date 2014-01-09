@@ -117,13 +117,14 @@ function Result=ReadResult(this, Taskhandle, FileName)
 % read M:/CompletedTasks/Taskhandle/Result.json                        
 
 % Result.IsSucess
-% Result.FigureHandle
-% Result.PropHandle
 %%
 
 Name=['M:/ProcessedTasks/' Taskhandle '/' FileName];
-Result = loadjson(Name);
-
+try
+    Result = loadjson(Name);
+catch
+    Restul.IsSucess=0;
+end
 end
 
 end

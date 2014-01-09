@@ -23,8 +23,12 @@ class TaskInformation
 {
 public:
 	// M:/PendingTasks/abcd1234567890/Task.json
-	QString Path;         // M:/PendingTasks/
+	QString FolderPath;   // M:/PendingTasks/
+
 	QString FolderName;   // abcd1234567890  is the handle of the task
+
+	QString Command;
+
 private:
 	QString FileName;     // Task.json   the name is fixed for every task
 
@@ -45,12 +49,12 @@ public:
 
 	QString GetFilePathAndName() const
 	{
-		return Path + FolderName + "/" + FileName;
+		return FolderPath + FolderName + "/" + FileName;
 	}
 
 	QString GetFilePath() const
 	{
-		return Path + FolderName + "/";
+		return FolderPath + FolderName + "/";
 	}
 };
 
@@ -136,7 +140,7 @@ public:
 	TaskHandler();
 	~TaskHandler();
 
-	bool RunTask(const TaskInformation& TaskInfo);
+	bool RunTask(TaskInformation& TaskInfo);
 
 	void WriteExampleTaskFile(const TaskInformation& TaskInfo);
 	void ReadExampleTaskFile(const TaskInformation& TaskInfo);
@@ -183,12 +187,18 @@ private:
 
 	//---------------------------------------
 
+	bool run_vtkshowaxes(const TaskInformation& TaskInfo);
+
+	//---------------------------------------
+
 	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
 	//---------------------------------------
 
 	bool run_vtkshowvolume(const TaskInformation& TaskInfo);
 
 	bool ReadVolumeProperty(QJsonObject PropertyObject, vtkVolumeProperty* VolumeProperty);	
+
+	bool run_vtkshowsliceofvolume(const TaskInformation& TaskInfo);
 	//---------------------------------------
 
 	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);

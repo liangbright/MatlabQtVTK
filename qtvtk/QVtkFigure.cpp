@@ -11,43 +11,46 @@
 #include <qDebug>
 
 #include <QVTKWidget.h> 
-#include <vtkRenderer.h> 
-#include <vtkRenderWindow.h>
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
+#include <vtkFieldData.h>
+#include <vtkPointData.h>
+#include <vtkProperty.h>
 #include <vtkSphereSource.h>
 #include <vtkGlyph3D.h>
 #include <vtkConeSource.h>
+#include <vtkImageProperty.h>
+#include <vtkVolumeProperty.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkLookupTable.h>
+#include <vtkPlane.h>
+#include <vtkVolumeMapper.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkVolumeTextureMapper3D.h>
+#include <vtkGPUVolumeRayCastMapper.h>
+#include <vtkFixedPointVolumeRayCastMapper.h>
+#include <vtkImageResliceMapper.h>
+#include <vtkDataSetMapper.h>
 #include <vtkActor.h>
+#include <vtkAxesActor.h>
+#include <vtkImageSlice.h>
 #include <vtkCamera.h>
+#include <vtkRenderer.h> 
+#include <vtkRenderWindow.h>
+//#include <vtkDelaunay3D.h>
+//#include <vtkGeometryFilter.h>
+#include <vtkImageChangeInformation.h>
 #include <vtkImageWriter.h>
 #include <vtkPNGWriter.h>
 #include <vtkJPEGWriter.h>
 #include <vtkWindowToImageFilter.h>
-#include <vtkColorTransferFunction.h>
-#include <vtkPiecewiseFunction.h>
-#include <vtkImageProperty.h>
-#include <vtkVolumeProperty.h>
-#include <vtkVolumeMapper.h>
-#include <vtkVolumeTextureMapper3D.h>
-#include <vtkGPUVolumeRayCastMapper.h>
-#include <vtkFixedPointVolumeRayCastMapper.h>
-#include <vtkDataSetMapper.h>
-//#include <vtkDelaunay3D.h>
-//#include <vtkGeometryFilter.h>
-#include <vtkLookupTable.h>
-#include <vtkFieldData.h>
-#include <vtkPointData.h>
-#include <vtkProperty.h>
 
 #include "QVtkFigureMainWindow.h"
 #include "QVtkFigure.h"
 
-QVtkFigure::QVtkFigure(quint64 Handle)
+QVtkFigure::QVtkFigure()
 {
-	m_Handle = Handle;
-
 	m_MainWindow = new QVtkFigureMainWindow();
 	
 	m_QVtkWidget = new QVTKWidget();
@@ -73,8 +76,6 @@ QVtkFigure::QVtkFigure(quint64 Handle)
 	connect(m_MainWindow, &QVtkFigureMainWindow::UserCloseMainWindow, this, &QVtkFigure::UserCloseFigure);
 
 	m_time.start();
-
-	m_PropCounter = 0;
 }
 
 QVtkFigure::~QVtkFigure()
@@ -178,9 +179,9 @@ vtkRenderer* QVtkFigure::GetRenderer()
 
 quint64 QVtkFigure::GeneratePropHandle()
 {
-	m_PropCounter = m_PropCounter + 1;
+	m_PropHandleCounter = m_PropHandleCounter + 1;
 
-	return m_PropCounter;
+	return m_PropHandleCounter;
 
 	/*
 	auto StartTime = m_time.elapsed();
@@ -259,6 +260,11 @@ void QVtkFigure::RemoveProp(quint64 PropHandle)
 	{
 		auto PropInfo = it->second;
 
+		if (PropInfo.Name == "Axes")
+		{
+			m_AxesHandle = 0;
+		}
+
 		m_MainWindow->RemovePropMenu(&PropInfo);
 
 		m_Renderer->RemoveViewProp(PropInfo.Prop);
@@ -299,6 +305,35 @@ void QVtkFigure::ChangePropVisibility()
 
 }
 
+
+quint64 QVtkFigure::ShowAxes()
+{
+	// only one set of axes
+	if (m_AxesHandle > 0)
+	{
+		return m_AxesHandle;
+	}
+
+	auto axes = vtkAxesActor::New();
+
+	axes->SetTotalLength(100,100,100);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Axes";
+
+	PropInfo.NameOnMenu = "Axes(" + QString::number(PropInfo.Handle) + ")";
+
+	PropInfo.Prop = axes;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
+}
+
+
 //===================================== Plot Point =====================================
 // Input:
 //   Points: 
@@ -313,9 +348,13 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* PointData)
 
 	PropInfo.Handle = this->GeneratePropHandle();
 
-	PropInfo.Name = "Points(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.Name = "Point";
+
+	PropInfo.NameOnMenu = "Points(" + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = PointData;
 
 	this->AddProp(PropInfo);
 
@@ -325,23 +364,25 @@ quint64 QVtkFigure::PlotPoint(vtkPoints* PointData)
 
 vtkProp* QVtkFigure::CreatePointProp(vtkPoints *PointData)
 {
-	qDebug() << "vtk points: " << PointData;
+	//qDebug() << "vtk points: " << PointData;
 
-	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount(); //1
+	//qDebug() << "Point refrence counter is " << PointData->GetReferenceCount(); //1
 
 	auto PolyData = vtkPolyData::New(); // reference counter of PolyData is 1
-	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//1
+	//qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//1
 		
 	PolyData->SetPoints(PointData);// increase the reference counter of Point
-	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//2
+	//qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//2
 
 	auto Glyph = vtkSmartPointer<vtkGlyph3D>::New();
 
 	Glyph->SetInputData(0, PolyData);//increase the reference counter of PolyData
 
-	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//3
+	//qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//3
+	
 	PolyData->Delete();//decrease the reference counter of PolyData
-	qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//2
+
+	//qDebug() << "PolyData refrence counter is " << PolyData->GetReferenceCount();//2
 
 	// draw spheres at the points
 	auto Sphere = vtkSmartPointer<vtkSphereSource>::New();
@@ -363,7 +404,7 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *PointData)
 
 	//decrease the reference counter of Point
 	PointData->Delete();
-	qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//1
+	//qDebug() << "Point refrence counter is " << PointData->GetReferenceCount();//1
 
 	//upcast to vktProp*, dynamic_cast is not necessary
 	return GlyphActor;  
@@ -378,28 +419,30 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPoints *PointData)
 }
 
 //======================================= Show Volume Image ==============================================================
-quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty, QString RenderMethord)
+quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty)
 {
-	auto Prop = this->CreateVolumeProp(VolumeData, VolumeProperty, RenderMethord);
+	auto Prop = this->CreateVolumeProp(VolumeData, VolumeProperty);
 
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
 
-	PropInfo.Name = "Volume(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.Name = "Volume";
+
+	PropInfo.NameOnMenu = "Volume(" + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = Prop;
 
-	//PropInfo.DataSource = VolumeData;
+	PropInfo.DataSource = VolumeData;
 
 	this->AddProp(PropInfo);
 
 	return PropInfo.Handle;
 }
 
-vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty,
-	                                  QString RenderMethord)
+vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty = nullptr)
 {
+
 	// fast but limited renderer: samples volume down
 	// raycasting may be nicer but is limited on data types
 	//vtkSmartVolumeMapper *smartVolumeMapper = vtkSmartVolumeMapper::New();
@@ -441,15 +484,32 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 
 	VolumeProp->SetMapper(VolumeMapper);
 
-	VolumeProp->SetProperty(VolumeProperty);
+	if (VolumeProperty != nullptr)
+	{
+		VolumeProp->SetProperty(VolumeProperty);
+		VolumeProperty->Delete();
+	}
+	else
+	{
+		double DataRange[2] = { 0, 0 };
+		VolumeData->GetScalarRange(DataRange);
 
+		auto tempVolumeProperty = this->CreateDefaultVolumeProperty(DataRange);
+
+		VolumeProp->SetProperty(tempVolumeProperty);
+		tempVolumeProperty->Delete();
+	}
+	
 	//VolumeProp->Modified();
 
 	VolumeMapper->Delete();
-	VolumeProperty->Delete();
+	
+
+	// VolumeData is created by NEW(), and then is owned by VolumeMapper.
 	VolumeData->Delete();
 
 	return VolumeProp;
+	
 }
 
 QString QVtkFigure::GetDefaultRenderMethod()
@@ -457,9 +517,16 @@ QString QVtkFigure::GetDefaultRenderMethod()
 	return QString("RayCast");
 }
 
-vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(const double DataRange[2])
+vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRange[2])
 {
 	auto VolumeProperty = vtkVolumeProperty::New();
+
+	if (DataRange[1] < DataRange[0])
+	{
+		qWarning() << "DataRange[1] < DataRange[0] @ CreateDefaultVolumeProperty";
+
+		return VolumeProperty; // keep it simple, nullptr will lead to crash
+	}
 
 	auto ColorTransferFunction = vtkSmartPointer<vtkColorTransferFunction>::New();
 
@@ -486,19 +553,20 @@ vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(const double DataRange[2
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.625), 1.0, 1.0, 0.0);
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.875), 1.0, 0.0, 0.0);
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*1.000), 0.5, 0.0, 0.0);
-
-	double step = (dataDiff / 10.0);
-	for (double i = DataRange[0]; i <= DataRange[1]; i += step)
+	
+	// create default opacity lut, 
+	double opacity = 0;
+	double step = (DataRange[1] - DataRange[0])/100;
+	for (double level = DataRange[0]; level < DataRange[1]; level += step)
 	{
-		auto *color = ColorTransferFunction->GetColor(i);
-		qDebug("auto color: %.2f -> %.2f %.2f %.2f", i, color[0], color[1], color[2]);
+		opacity = 0.01 + 0.99*(level - DataRange[0]) / (DataRange[1] + 0.01);
+		opacity = opacity*0.5;
+		OpacityTransferFunction->AddPoint(level, opacity);
 	}
-	
-	// create default opacity lut, constant opacities over whole data range
-	double opacity = 0.05;
-	
-	OpacityTransferFunction->AddPoint(DataRange[0], opacity);
-	OpacityTransferFunction->AddPoint(DataRange[1], opacity);
+	//constant opacities over whole data range
+	//double opacity = 0.05;
+	//OpacityTransferFunction->AddPoint(DataRange[0], opacity);
+	//OpacityTransferFunction->AddPoint(DataRange[1], opacity);
 
 	VolumeProperty->SetColor(ColorTransferFunction);
 	
@@ -507,6 +575,128 @@ vtkVolumeProperty* QVtkFigure::GetDefaultVolumeProperty(const double DataRange[2
 	return VolumeProperty;
 }
 
+
+quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty)
+{
+	auto it = m_PropRecord.find(VolumePropHandle);
+	if (it == m_PropRecord.end())
+	{
+		qWarning() << "PropHandle is invalid @ ShowSliceOfVolume";
+		return 0;
+	}
+
+	auto VolumePropInfo = it->second;
+	if (VolumePropInfo.Name != "Volume")
+	{
+		qWarning() << "PropHandle does not match Prop @ ShowSliceOfVolume";
+		return 0;
+	}
+
+	auto VolumeData = static_cast<vtkImageData*>(VolumePropInfo.DataSource);
+	
+    //--------------------------------------------------------------------------
+
+	auto Prop = this->CreateSliceOfVolumeProp(VolumeData, SlicePlane, ImageProperty);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "SliceOfVolume";
+
+	PropInfo.NameOnMenu = "SliceOfVolume(" + QString::number(PropInfo.Handle) + ")";
+
+	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = VolumeData;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
+
+}
+
+vtkProp* QVtkFigure::CreateSliceOfVolumeProp(vtkImageData* VolumeData, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty)
+{
+	// the origin in SlicePlane is relative to VolumeData
+	// change it to the world coordinate system
+
+	double VolumeOrigin[3] = { 0, 0, 0 };		
+	VolumeData->GetOrigin(VolumeOrigin);
+	
+	double PlaneOrigin[3] = { 0, 0, 0 };
+	SlicePlane->GetOrigin(PlaneOrigin);
+
+	PlaneOrigin[0] += VolumeOrigin[0];
+	PlaneOrigin[1] += VolumeOrigin[1];
+	PlaneOrigin[2] += VolumeOrigin[2];
+
+	SlicePlane->SetOrigin(PlaneOrigin);
+
+	auto ResliceMapper = vtkSmartPointer<vtkImageResliceMapper>::New();
+
+	ResliceMapper->SetSlicePlane(SlicePlane);
+
+	ResliceMapper->SetInputData(VolumeData);
+
+	auto SliceProp = vtkImageSlice::New();
+
+	SliceProp->SetMapper(ResliceMapper);
+
+	if (ImageProperty != nullptr)
+	{
+		SliceProp->SetProperty(ImageProperty);
+		ImageProperty->Delete();
+	}
+	else
+	{
+		double DataRange[2] = { 0, 0 };
+
+		VolumeData->GetScalarRange(DataRange);
+
+		auto tempImageProperty = this->CreateDefaultImageProperty(DataRange);
+
+		SliceProp->SetProperty(tempImageProperty);
+		tempImageProperty->Delete();
+	}
+
+	// do not use VolumeData.Delete() here
+
+	return SliceProp;
+}
+
+
+vtkImageProperty* QVtkFigure::CreateDefaultImageProperty(const double DataRange[2])
+{	
+	auto ImageProperty = vtkImageProperty::New();
+
+	if (DataRange[1] < DataRange[0])
+	{
+		qWarning() << "DataRange[1] < DataRange[0] @ CreateDefaultImageProperty";
+
+		return ImageProperty; // keep it simple, nullptr will lead to crash
+	}
+
+	auto Lut = vtkSmartPointer<vtkLookupTable>::New();
+
+	Lut->SetIndexedLookup(false);
+
+	Lut->SetTableRange(DataRange[0], DataRange[1]);
+	Lut->SetSaturationRange(0, 0);
+	Lut->SetHueRange(0, 0);
+	Lut->SetValueRange(0, 1);
+	Lut->SetRampToLinear();
+
+	Lut->Build();
+
+	ImageProperty->SetOpacity(1);
+
+	ImageProperty->SetLookupTable(Lut);
+
+	ImageProperty->UseLookupTableScalarRangeOn();
+
+	return ImageProperty;
+}
 
 //======================================= Show Mesh ==============================================================
 quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
@@ -517,9 +707,13 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 
 	PropInfo.Handle = this->GeneratePropHandle();
 
-	PropInfo.Name = "Mesh(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.Name = "Mesh";
+
+	PropInfo.NameOnMenu = "Mesh(" + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = MeshData;
 
 	this->AddProp(PropInfo);
 

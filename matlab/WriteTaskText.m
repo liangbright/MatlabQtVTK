@@ -19,9 +19,9 @@ for n=1:ElementNum
     [~, L]=size(Element);
     if  L == 2      
         if n < ElementNum
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' ',\n'];
+            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' ',\r\n'];
         else
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\n'];
+            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\r\n'];
         end
         fprintf(fid, TextLine);        
     else

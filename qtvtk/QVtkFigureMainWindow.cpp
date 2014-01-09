@@ -63,7 +63,7 @@ void QVtkFigureMainWindow::CreateMenus(QVtkFigure *Figure)
 //------------------------------------------------------------------------------------------
 void QVtkFigureMainWindow::AddPropMenu(QVtkFigure* Figure, PropInfomration* PropInfo)
 {	
-	PropInfo->PropMenu = new QMenu(PropInfo->Name);
+	PropInfo->PropMenu = new QMenu(PropInfo->NameOnMenu);
 
 	m_PropListMenu->addMenu(PropInfo->PropMenu);
 

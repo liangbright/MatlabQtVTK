@@ -13,12 +13,15 @@
 #include <vtkImageData.h>
 #include <vtkDoubleArray.h>
 #include <vtkFieldData.h>
+#include <vtkPlane.h>
+#include <vtkVolumeProperty.h>
 
 #include <ctime>
 #include <vector>
 
 #include "TaskHandler.h"
 #include "SimpleJsonWriter.h"
+
 
 TaskHandler::TaskHandler()
 {
@@ -44,6 +47,10 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkfigure);
 
+    Commmand = "vtkshowaxes";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowaxes);
+
 	Commmand = "vtkplotpoint";
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplotpoint);
@@ -51,6 +58,10 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	Commmand = "vtkshowvolume";
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowvolume);
+
+	Commmand = "vtkshowsliceofvolume";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowsliceofvolume);
 
 	Commmand = "vtkshowpolymesh";
 	m_MatlabCommandList.append(Commmand);
@@ -74,7 +85,9 @@ void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle)
 
 	auto Handle = this->GenerateFigureHandle();
 
-	auto Figure_upt = std::unique_ptr<QVtkFigure>(new QVtkFigure(Handle));
+	auto Figure_upt = std::unique_ptr<QVtkFigure>(new QVtkFigure);
+
+	Figure_upt->SetHandle(Handle);
 
 	connect(Figure_upt.get(), &QVtkFigure::UserCloseFigure, this, &TaskHandler::CloseQVtkFigure);
 
@@ -129,7 +142,7 @@ QVtkFigure* TaskHandler::GetQVtkFigure(quint64 FigureHandle)
 
 bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo)
 {
-	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
+	QString tempName = TaskInfo.GetFilePath() + "~temp~" + ResultFileName;
 
 	QFile ResultFile(tempName);
 
@@ -169,11 +182,11 @@ bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString 
 	Pair.Value = "no";
 	PairList.push_back(Pair);
 
-	Pair.Name = "FigureHandle";
-	Pair.Value = "";
+	Pair.Name = "Command";
+	Pair.Value = TaskInfo.Command;
 	PairList.push_back(Pair);
 
-	Pair.Name = "PropHandle";
+	Pair.Name = "FigureHandle";
 	Pair.Value = "";
 	PairList.push_back(Pair);
 
@@ -181,7 +194,7 @@ bool TaskHandler::WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString 
 	Pair.Value = FailureInfo;
 	PairList.push_back(Pair);
 
-	SimpleJsonWriter::WritePair(PairList, TaskInfo.Path + TaskInfo.FolderName + "/", ResultFileName);
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
 
 	return true;
 }
@@ -221,32 +234,89 @@ bool TaskHandler::run_vtkfigure(const TaskInformation& TaskInfo)
 	quint64  FigureHandle;
 	TaskHandler::CreateQVtkFigure(&Figure, &FigureHandle);
 	//---------------------- Write Result ----------------------------------------//
-	/*
-	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
+	std::vector<NameValuePair> PairList;
 
-	QFile ResultFile(tempName);
+	NameValuePair Pair;
 
-	if (!ResultFile.open(QIODevice::WriteOnly))
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+	return true;
+}
+
+
+bool TaskHandler::run_vtkshowaxes(const TaskInformation& TaskInfo)
+{
+	qDebug() << "run_vtkshowaxes";
+
+	QFile TaskFile(TaskInfo.GetFilePathAndName());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
 	{
-		qWarning("Couldn't open file to save result");
+		qWarning("Couldn't open task file.");
 		return false;
 	}
 
-	QJsonObject ResultObject;
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
 
-	ResultObject["IsSuccess"] = QString("yes");
+	//-------------------- Read some info ----------------------------------------//
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
 
-	ResultObject["FigureHandle"] = QString::number(FigureHandle);
+	//get FigureHandle
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 
-	ResultObject["PropHandle"] = QString("");
+	//check FigureHandle
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 
-	QJsonDocument ResultDoc(ResultObject);
+	// ----------------------- show axes -------------------------------------------//
+	auto PropHandle = Figure->ShowAxes();
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run  Figure->ShowAxes";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 
-	ResultFile.write(ResultDoc.toJson());
-	ResultFile.close();
-
-	ResultFile.rename(TaskInfo.Path + TaskInfo.FolderName + "/" + ResultFileName);
-	*/
+	//---------------------- Write Result ----------------------------------------//
 	std::vector<NameValuePair> PairList;
 
 	NameValuePair Pair;
@@ -260,10 +330,10 @@ bool TaskHandler::run_vtkfigure(const TaskInformation& TaskInfo)
 	PairList.push_back(Pair);
 
 	Pair.Name = "PropHandle";
-	Pair.Value = "";
+	Pair.Value = QString::number(PropHandle);
 	PairList.push_back(Pair);
 
-	SimpleJsonWriter::WritePair(PairList, TaskInfo.Path + TaskInfo.FolderName + "/", ResultFileName);
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
 	//-----------------------------Done---------------------------------------------------//
 	return true;
 }
@@ -353,7 +423,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 	
 	// Get Color if it is specified in the file
 	double PointColor[3] = { 1, 1, 1 }; // {R, G, B}; white
-	bool IscolorOK = true;
+	bool IscolorOK = false;
 
 	it = TaskObject.find("PointColor");
 	if (it != TaskObject.end())
@@ -365,23 +435,9 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 			PointColor[0] = ColorValueList.at(0).toDouble();
 			PointColor[1] = ColorValueList.at(1).toDouble();
 			PointColor[2] = ColorValueList.at(2).toDouble();
-		}
-		else
-		{
-			IscolorOK = false;
-		}
-	}
-	else
-	{ 
-		IscolorOK = false;
-	}
 
-
-	if (IscolorOK == false)
-	{
-		PointColor[0] = 1;
-		PointColor[1] = 1;
-		PointColor[2] = 1;
+			IscolorOK = true;
+		}
 	}
 
 	QString DataFileFullNameAndPath;
@@ -413,34 +469,14 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 
 	//---------------------- Plot Point ----------------------------------------//
 	auto PropHandle = Figure->PlotPoint(Point);
-
-	//---------------------- Write Result ----------------------------------------//
-	/*
-	QString tempName = TaskInfo.Path + TaskInfo.FolderName + "/~" + ResultFileName;
-
-	QFile ResultFile(tempName);
-
-	if (!ResultFile.open(QIODevice::WriteOnly))
+	if (PropHandle == 0)
 	{
-		qWarning("Couldn't open file to save result");
+		QString FailureInfo = "Can not run  Figure->PlotPoint";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
 		return false;
 	}
-
-	QJsonObject ResultObject;
-
-	ResultObject["IsSuccess"] = QString("yes");
-
-	ResultObject["FigureHandle"] = QString::number(FigureHandle);
-
-	ResultObject["PropHandle"] = QString::number(PropHandle);
-
-	QJsonDocument ResultDoc(ResultObject);
-
-	ResultFile.write(ResultDoc.toJson());
-	ResultFile.close();
-
-	ResultFile.rename(TaskInfo.Path + TaskInfo.FolderName + "/" + ResultFileName);
-	*/
+	//---------------------- Write Result ----------------------------------------//
 	std::vector<NameValuePair> PairList;
 
 	NameValuePair Pair;
@@ -517,7 +553,7 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 
 	//get image size ----------------------------------------------------------
 	int ImageSize[3] = { 0, 0, 0 };
-	bool IsImageSizeOK = true;
+	bool IsImageSizeOK = false;
 
 	it = TaskObject.find("ImageSize");
 	if (it != TaskObject.end())
@@ -526,18 +562,12 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 		auto tempsize = SizeValueList.size();
 		if (tempsize == 3)
 		{
-			ImageSize[0] = SizeValueList.at(0).toInt();
-			ImageSize[1] = SizeValueList.at(1).toInt();
-			ImageSize[2] = SizeValueList.at(2).toInt();
+			ImageSize[0] = int(SizeValueList.at(0).toDouble());
+			ImageSize[1] = int(SizeValueList.at(1).toDouble());
+			ImageSize[2] = int(SizeValueList.at(2).toDouble());
+
+			IsImageSizeOK = true;
 		}
-		else
-		{
-			IsImageSizeOK = false;
-		}
-	}
-	else
-	{ 
-		IsImageSizeOK = false;
 	}
 
 	if (IsImageSizeOK == false)
@@ -550,7 +580,7 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 
 	//get image origin ----------------------------------------------------------
 	double Origin[3] = { 0.0, 0.0, 0.0 };
-	bool IsOriginOK = true;
+	bool IsOriginOK = false;
 
 	it = TaskObject.find("Origin");	
 	if (it != TaskObject.end())
@@ -562,23 +592,17 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 			Origin[0] = OriginValueList.at(0).toDouble();
 			Origin[1] = OriginValueList.at(1).toDouble();
 			Origin[2] = OriginValueList.at(2).toDouble();
+
+			IsOriginOK = true;
 		}
-		else
-		{
-			IsOriginOK = false;
-		}
-	}
-	else
-	{ 
-		IsOriginOK = false;
 	}
 
 	if (IsOriginOK == false)
 	{
-		qWarning() << "Origin is invalid, use [0,0,0]";
-		Origin[0] = 0;
-		Origin[1] = 0;
-		Origin[2] = 0;
+		QString FailureInfo = "Origin is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
 	}
 
 	// get MatlabDataType ----------------------------------------------------------
@@ -609,42 +633,33 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// get DataRange ----------------------------------------------------------
-	double DataRange[2];
-	bool IsRangeOK = true;
-	it = TaskObject.find("DataRange");
+	// ------------ set VolumeProperty --------------------------------------------------
+	
+	//get IntensityDisplayRange if it is in the file
+	double IntensityDisplayRange[2] = { 0, 0 };
+	bool IsRangeOK = false;
+
+	it = TaskObject.find("IntensityDisplayRange");
 	if (it != TaskObject.end())
 	{
-		auto RangeValueList = it.value().toString().split(",");
-		auto tempsize = RangeValueList.size();
+		auto SizeValueList = it.value().toString().split(",");
+		auto tempsize = SizeValueList.size();
 		if (tempsize == 2)
 		{
-			DataRange[0] = RangeValueList.at(0).toDouble();
-			DataRange[1] = RangeValueList.at(1).toDouble();
-		}
-		else
-		{
-			IsRangeOK = false;
+			IntensityDisplayRange[0] = SizeValueList.at(0).toDouble();
+			IntensityDisplayRange[1] = SizeValueList.at(1).toDouble();
+		
+			IsRangeOK = true;
 		}
 	}
-	else
+
+	//set VolumeProperty
+	vtkVolumeProperty* VolumeProperty = nullptr;
+
+	if (IsRangeOK == true)
 	{
-		IsRangeOK = false;
+		VolumeProperty = Figure->CreateDefaultVolumeProperty(IntensityDisplayRange);
 	}
-
-	if (IsRangeOK == false)
-	{
-		QString FailureInfo = "DataRange is unknown";
-		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
-		qWarning() << FailureInfo;
-		return false;
-	}
-
-	//--------------------- Get VolumeProperty ---------------------------------------
-	auto VolumeProperty = Figure->GetDefaultVolumeProperty(DataRange);
-
-	//--------------------- Get RenderMethod ---------------------------------------
-	auto RenderMethod = Figure->GetDefaultRenderMethod();
 
 	//--------------------- Get the data ---------------------------------------//
 	qDebug() << "Read Image Data from" << DataFileFullName;
@@ -662,10 +677,187 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 	qDebug() << "Image Data is loaded:" << DataFileFullName;
 
 	//---------------------- Show Image ----------------------------------------//
-	auto PropHandle = Figure->ShowVolume(ImageData, VolumeProperty, RenderMethod);
+	auto PropHandle = Figure->ShowVolume(ImageData, VolumeProperty);
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run Figure->ShowVolume";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 
 	//---------------------- Write Result ----------------------------------------//
 	
+	std::vector<NameValuePair> PairList;
+
+	NameValuePair Pair;
+
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	Pair.Name = "PropHandle";
+	Pair.Value = QString::number(PropHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+	return true;
+}
+
+
+bool TaskHandler::run_vtkshowsliceofvolume(const TaskInformation& TaskInfo)
+{
+	QFile TaskFile(TaskInfo.GetFilePathAndName());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+	//----------------------------------------------------------//
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some Information from Task.json ----------------------------------//
+
+	// get ResultFileName ----------------------------------------------------------
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	//get FigureHandle ----------------------------------------------------------
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//check FigureHandle ----------------------------------------------------------
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//get VolumeHandle ----------------------------------------------------------
+	quint64 VolumeHandle = 0; // invalid handle
+	it = TaskObject.find("VolumeHandle");
+	if (it != TaskObject.end())
+	{
+		VolumeHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "VolumeHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//get the SlicePlane --------------------------------
+	double Origin[3] = { 0.0, 0.0, 0.0 };
+	double Normal[3] = { 0.0, 0.0, 0.0 };
+
+	bool IsPlaneOK = false;
+
+	it = TaskObject.find("SlicePlane");
+	if (it != TaskObject.end())
+	{
+		auto PlaneValueList = it.value().toString().split(",");
+		auto tempsize = PlaneValueList.size();
+		if (tempsize == 6)
+		{
+			Origin[0] = PlaneValueList.at(0).toDouble();
+			Origin[1] = PlaneValueList.at(1).toDouble();
+			Origin[2] = PlaneValueList.at(2).toDouble();
+
+			Normal[0] = PlaneValueList.at(3).toDouble();
+			Normal[1] = PlaneValueList.at(4).toDouble();
+			Normal[2] = PlaneValueList.at(5).toDouble();
+
+			IsPlaneOK = true;
+		}
+	}
+
+	if (IsPlaneOK == false)
+	{
+		QString FailureInfo = "SlicePlane is unknown or invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+    auto SlicePlane = vtkSmartPointer<vtkPlane>::New();
+	SlicePlane->SetOrigin(Origin);
+	SlicePlane->SetNormal(Normal);
+
+	// ------------ set ImageProperty --------------------------------------------------
+
+	//get IntensityDisplayRange if it is in the file
+	double IntensityDisplayRange[2] = { 0, 0 };
+	bool IsRangeOK = false;
+
+	it = TaskObject.find("IntensityDisplayRange");
+	if (it != TaskObject.end())
+	{
+		auto SizeValueList = it.value().toString().split(",");
+		auto tempsize = SizeValueList.size();
+		if (tempsize == 2)
+		{
+			IntensityDisplayRange[0] = SizeValueList.at(0).toDouble();
+			IntensityDisplayRange[1] = SizeValueList.at(1).toDouble();
+
+			IsRangeOK = true;
+		}
+	}
+
+	//set ImageProperty
+	vtkImageProperty* ImageProperty = nullptr;
+
+	if (IsRangeOK == true)
+	{
+		ImageProperty = Figure->CreateDefaultImageProperty(IntensityDisplayRange);
+	}
+
+	//---------------------- show slice of the volume ---------------------//
+
+	auto PropHandle = Figure->ShowSliceOfVolume(VolumeHandle, SlicePlane, ImageProperty);
+
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run Figure->ShowSliceOfVolume";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//---------------------- Write Result ----------------------------------------//
+
 	std::vector<NameValuePair> PairList;
 
 	NameValuePair Pair;
@@ -742,18 +934,6 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// get MeshColor  ------------------------------------------------------
-	QString MeshColorName = "white";//default color in QVtkFigure
-	it = TaskObject.find("MeshColorName");
-	if (it != TaskObject.end())
-	{
-		MeshColorName = it.value().toString();
-	}
-	else
-	{
-		qWarning("MeshColorName is unknown, use white");
-	}
-
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -819,6 +999,7 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// load mesh data ----------------------------------------------------------------
 	QString FilePathAndName_PointData = TaskInfo.GetFilePath() + PointDataFileName;
 	QString FilePathAndName_CellData = TaskInfo.GetFilePath() + CellDataFileName;
 
@@ -838,28 +1019,53 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
-	//-----------------------------------------------------------------------
-	// set color
-	if (MeshColorName != "white")
-	{	
-		double Value[3] = { 0, 0, 0 };
+	// get MeshColor  ------------------------------------------------------
+	double MeshColorValue[3] = { 1, 1, 1 };//white
 
-		auto IsColorOK = TaskHandler::GetRBGColorByName(MeshColorName, Value);
-		if (IsColorOK == true)
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
+	{
+		auto MeshColorName = it.value().toString();
+		TaskHandler::GetRBGColorByName(MeshColorName, MeshColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
+
+		it = TaskObject.find("MeshColorValue");
+		if (it != TaskObject.end())
 		{
-			vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
-			tempColor->SetNumberOfComponents(3);
-			tempColor->SetName("Color");
-			tempColor->InsertNextTuple(Value);
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				MeshColorValue[0] = ColorValueList.at(0).toDouble();
+				MeshColorValue[1] = ColorValueList.at(1).toDouble();
+				MeshColorValue[2] = ColorValueList.at(2).toDouble();
 
-			MeshData->GetFieldData()->AddArray(tempColor);
+				IscolorOK = true;
+			}
 		}
 	}
 
+	// set color carried in FieldData of MeshData
+	vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
+	tempColor->SetNumberOfComponents(3);
+	tempColor->SetName("Color");
+	tempColor->InsertNextTuple(MeshColorValue);
+
+	MeshData->GetFieldData()->AddArray(tempColor);
+
 	//---------------------- Show Mesh ----------------------------------------//
-
 	auto PropHandle = Figure->ShowPloyMesh(MeshData);
-
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run  Figure->ShowPloyMesh";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
 	//---------------------- Write Result ----------------------------------------//
 
 	std::vector<NameValuePair> PairList;
@@ -939,18 +1145,6 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// get MeshColor  ------------------------------------------------------
-	QString MeshColorName = "white";//default color in QVtkFigure
-	it = TaskObject.find("MeshColorName");
-	if (it != TaskObject.end())
-	{
-		MeshColorName = it.value().toString();
-	}
-	else
-	{
-		qWarning("MeshColorName is unknown, use white");
-	}
-
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -1020,6 +1214,7 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// load mesh data -----------------------------------------------------------------------------
 	QString FilePathAndName_PointData = TaskInfo.GetFilePath() + PointDataFileName;
 	QString FilePathAndName_TriangleData = TaskInfo.GetFilePath() + TriangleDataFileName;
 
@@ -1040,23 +1235,43 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
-	//-----------------------------------------------------------------------
-	// set color
-	if (MeshColorName != "white")
+	// get MeshColor  ------------------------------------------------------
+	double MeshColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
 	{
-		double Value[3] = { 0, 0, 0 };
+		auto MeshColorName = it.value().toString();
+		TaskHandler::GetRBGColorByName(MeshColorName, MeshColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
 
-		auto IsColorOK = TaskHandler::GetRBGColorByName(MeshColorName, Value);
-		if (IsColorOK == true)
+		it = TaskObject.find("MeshColorValue");
+		if (it != TaskObject.end())
 		{
-			vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
-			tempColor->SetNumberOfComponents(3);
-			tempColor->SetName("Color");
-			tempColor->InsertNextTuple(Value);
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				MeshColorValue[0] = ColorValueList.at(0).toDouble();
+				MeshColorValue[1] = ColorValueList.at(1).toDouble();
+				MeshColorValue[2] = ColorValueList.at(2).toDouble();
 
-			MeshData->GetFieldData()->AddArray(tempColor);
+				IscolorOK = true;
+			}
 		}
 	}
+
+	// set color carried in FieldData of MeshData
+	vtkSmartPointer<vtkDoubleArray> tempColor = vtkSmartPointer<vtkDoubleArray>::New();
+	tempColor->SetNumberOfComponents(3);
+	tempColor->SetName("Color");
+	tempColor->InsertNextTuple(MeshColorValue);
+
+	MeshData->GetFieldData()->AddArray(tempColor);
 
 	//---------------------- Show Mesh ----------------------------------------//
 
@@ -1102,14 +1317,14 @@ bool TaskHandler::run_vtkdeleteprop(const TaskInformation& Task)
 }
 
 
-bool TaskHandler::RunTask(const TaskInformation& TaskInfo)
+bool TaskHandler::RunTask(TaskInformation& TaskInfo)
 {	
 	QFile TaskFile(TaskInfo.GetFilePathAndName());
 
 	if (!TaskFile.open(QIODevice::ReadOnly)) 
 	{
 		qWarning("Couldn't open task file (*.json)");
-		qWarning() << "Path" << TaskInfo.Path;
+		qWarning() << "FolderPath" << TaskInfo.FolderPath;
 		qWarning() << "FolderName" << TaskInfo.FolderName;
 		qWarning() << "FileName" << TaskInfo.GetFileName();
 
@@ -1134,6 +1349,8 @@ bool TaskHandler::RunTask(const TaskInformation& TaskInfo)
 		return false;
 	}
 	
+	TaskInfo.Command = Command;
+
 	qDebug() << "Matlab Command is " << Command;
 
 	auto it2 = m_MatlabCommandTranslator.find(Command);

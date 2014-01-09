@@ -14,7 +14,7 @@ public:
 class SimpleJsonWriter
 {
 public:
-	static bool WritePair(std::vector<NameValuePair>, QString Path, QString FileName);
+	static bool WritePair(std::vector<NameValuePair>, QString FilePath, QString FileName);
 
 };
 
