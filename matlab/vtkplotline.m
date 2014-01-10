@@ -7,7 +7,6 @@ Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 if iscell(Line)
     LineNum=num2str(int32(length(Line)), '%d');
-    LineData=Line;
     
     TotalPointNum=0;
     for k=1:LineNum
@@ -17,7 +16,7 @@ if iscell(Line)
             disp('wrong input @ vtkplotline')
             return
         end        
-        TotalPointNum=TotalPointNum+length(Line{k});
+        TotalPointNum=TotalPointNum+NumofCol;
     end
     
     TotalPointNum=num2str(int32(TotalPointNum), '%d');
@@ -27,9 +26,8 @@ else
         disp('wrong input @ vtkplotline')
         return
     end
-    LineData={Line};
     LineNum=num2str(1, '%d');
-    TotalPointNum=num2str(int32(length(Line)), '%d');
+    TotalPointNum=num2str(int32(NumofCol), '%d');
 end
 
 LineColorValue=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];

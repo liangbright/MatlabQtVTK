@@ -26,15 +26,12 @@ end
 Command='vtkshowpolymesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
-DataFileType='vector';
-
 [~, PointNum]=size(MeshFile.Point);
+PointNum=num2str(int64(PointNum), '%d');
 
-PointDataFileName='PointData.vector';
+PointDataFileName='PointData.raw';
+PointDataFileType='raw';
 PointDataType='double';
-
-CellDataFileName='CellData.vector';
-CellDataType='int64';
 
 CellNum=length(MeshFile.Cell);
 
@@ -45,7 +42,9 @@ end
 
 CellNum=num2str(int64(CellNum), '%d');
 
-PointNum=num2str(int64(PointNum), '%d');
+CellDataFileName='CellData.vector';
+CellDataFileType='vector';
+CellDataType='int64';
 
 ResultFileName='Result.json';
 %----------------------------------------------------------------------------
@@ -62,8 +61,8 @@ Task.Text={{'Command', Command}, ...
            {'CellDataFileName', CellDataFileName},...
            {'ResultFileName', ResultFileName}};
 
-Task.Data={{PointDataFileName, DataFileType, PointDataType, MeshFile.Point},...
-           {CellDataFileName, DataFileType, CellDataType, MeshFile.Cell}};
+Task.Data={{PointDataFileName, PointDataFileType, PointDataType, MeshFile.Point},...
+           {CellDataFileName, CellDataFileType, CellDataType, MeshFile.Cell}};
 
 %%       
 Client = MatlabClientClass;       

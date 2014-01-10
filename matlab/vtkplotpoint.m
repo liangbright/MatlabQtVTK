@@ -11,8 +11,8 @@ PointNum=num2str(int64(Num), '%d');
 
 PointColorValue=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
 
-FileType='vector';
-PointDataFileName='PointData.vector';
+FileType='raw';
+PointDataFileName='PointData.raw';
 
 PointDataType='double';
 

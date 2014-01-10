@@ -12,24 +12,22 @@ end
 Command='vtkshowtrianglemesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
-DataFileType='vector';
+DataFileType='raw';
 
 [~, PointNum]=size(MeshFile.Point);
+PointNum=num2str(int64(PointNum), '%d');
 
-PointDataFileName='PointData.vector';
+PointDataFileName='PointData.raw';
 PointDataType='double';
 
-TriangleDataFileName='TriangleData.vector';
+TriangleDataFileName='TriangleData.raw';
 TriangleDataType='int64';
 
 [~, TriangleNum]=size(MeshFile.Triangle);
+TriangleNum=num2str(int64(TriangleNum), '%d');
 
 % change index to start from 0 (c++, vtk), in matlab it starts from 1.
 MeshFile.Triangle=MeshFile.Triangle-1;
-
-PointNum=num2str(int64(PointNum), '%d');
-
-TriangleNum=num2str(int64(TriangleNum), '%d');
 
 ResultFileName='Result.json';
 %---------------------------------------------------------------------------------
