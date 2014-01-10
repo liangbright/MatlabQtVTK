@@ -34,10 +34,12 @@ IntensityDisplayRange=[0, 2000];
 Result7 = vtkshowvolume(VolumeFigureHandle, Volume, IntensityDisplayRange);
 VolumeHandle=Result7.PropHandle;
 %%
-% Volume(y,x,z)
+% Volume(y+1,x+1,z+1) is the voxel at (x, y, z)
 SlicePlane.Normal=[0, 0, 1];  % (x,y,z)
-SlicePlane.Origin=[0, 0, 10]; % (x,y,z)
+SlicePlane.Origin=[0, 0, 9]; % (x,y,z)
 Result8 = vtkshowsliceofvolume(VolumeFigureHandle,VolumeHandle, SlicePlane, IntensityDisplayRange);
+%%
+tempResult=vtkshowaxes(VolumeFigureHandle);
 %%
 imtool(Volume(:,:,10))
 %% ================================= test TriangleMesh ===============================================================

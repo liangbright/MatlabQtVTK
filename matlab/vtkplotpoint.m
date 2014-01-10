@@ -9,12 +9,12 @@ Taskhandle=[Command num2str(uint64(100000*rand))];
 
 PointNum=num2str(int64(Num), '%d');
 
-PointColor=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
+PointColorValue=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
 
 FileType='vector';
 PointDataFileName='PointData.vector';
 
-DataType='double';
+PointDataType='double';
 
 ResultFileName='Result.json';
 %----------------------------------------------------------------------------------
@@ -24,12 +24,12 @@ Task.Taskhandle=Taskhandle;
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
            {'PointNum', PointNum}, ...
-           {'PointColor', PointColor}, ...      
+           {'PointColorValue', PointColorValue}, ...      
            {'PointDataFileName', PointDataFileName}, ...
-           {'DataType', DataType},...
+           {'PointDataType', PointDataType},...
            {'ResultFileName', ResultFileName}};
        
-Task.Data={{PointDataFileName, FileType, DataType, Point}};
+Task.Data={{PointDataFileName, FileType, PointDataType, Point}};
 
 %%
 Client = MatlabClientClass;

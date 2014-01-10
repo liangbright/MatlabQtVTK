@@ -97,13 +97,14 @@ end
 function IsSucess=WriteVectorDataTobinary(FullFileName, DataType, Data)
 % Data format:
 % case 1:
-% Data=[1.234, 2.345, 4.567, 1.112; 1.2, 2.5, 4.7, 2.1];
+% Data=[1.234, 2.345, 4.567, 1.112;
+%       1.2,   2.5,   4.7,   2.1];
 % each colume of Data is a vector
 % Data is saved as Data(:)
 % case 2:
 % Data={[1.234, 2.345, 4.567, 1.112], [1.2, 2.5, 4.7, 2.1]}
-% Each item Data{n} is a vector saved as [length(item), item(1), item(2)]
-% Data is saved as [[2, item(1), item(2)] [3, item(1), item(2), item(3)] ...]
+% Each item=Data{n} is a vector saved as [length(item), item(1), item(2)]
+% Data is saved as [[length(Data{1}(:)), Data{1}(:)], [length(Data{2}(:)), Data{2}(:)], ...]
 % Output:
 % output is binary file (*.vector)
 
@@ -112,9 +113,6 @@ IsSucess=0;
 IsCell=iscell(Data);
 if IsCell
     VectorNum=length(Data);
-else
-    [~, VectorNum]=size(Data);
-    %Data=cast(Data,DataType);
 end
 
 fid = fopen(FullFileName, 'w');
@@ -129,9 +127,10 @@ if ~IsCell
     fwrite(fid, Data(:), DataType);
 else
     for k=1:VectorNum 
-         temp=[length(Data{k}) Data{k}];
-         %temp=cast(temp,DataType);
-         fwrite(fid, temp(:), DataType);
+        Vector=Data{k};
+        Vector=Vector(:);
+        temp=[length(Vector); Vector];
+        fwrite(fid, temp, DataType);
     end
 end
 
@@ -143,33 +142,53 @@ end
 
 
 function IsSucess=WriteMatrixDataTobinary(FullFileName, DataType, Data)
-% Input format:
-% case 1:
-% Data is cell, 
-% each item Data{n} is a matrix  saved as Data{n}(:)
-% output:
-% binary file(*.matrix)
+% Input Data format:
+%
+% case 1: raw matrix
+% Data=[1.234, 2.345, 4.567, 1.112; 
+%       1.2,   2.5,   4.7,   2.1];
+% Data is saved as Data(:)
+%
+% case 2: matrix in cell
+% Data={[1.234, 2.345, 4.567, 1.112], 
+%        [1.2, 2.5; 
+%        4.7, 2.1]}
+% Each item=Data{n} is a matrix saved as
+% [NumOfRow_n, NumOfCol_n]=size(Data{n});
+% Data{n} is saved as [NumOfCol_n, NumOfRow_n, Data{n}(:)] 
+% Data is saved as [[NumOfCol_1, NumOfRow_1, Data{1}(:)], [NumOfCol_n, NumOfRow_n, Data{2}(:)], ...]
+%
+% Output:
+% output is binary file (*.matrix)
 
 IsSucess=0;
 
-if ~iscell(Data)
-    disp('Input Data to WriteTaskData_image must be cell')
+IsCell=iscell(Data);
+if IsCell
+    MatrixNum=length(Data);
 end
 
 fid = fopen(FullFileName, 'w');
-if fid == -1
-    disp('can not open matrix file')
-    fclose(fid);
+
+if fid == -1    
+    disp('can not open vector file')        
+    fclose(fid);        
     return
 end
 
-L=length(Data);
-
-for n=1:L    
-    fwrite(fid, Data{n}(:), DataType);    
+if ~IsCell
+    fwrite(fid, Data(:), DataType);
+else
+    for k=1:MatrixNum 
+        Matrix=Data{k};
+        [NumOfRow, NumOfCol]=size(Matrix);
+        temp=[NumOfCol; NumOfRow; Matrix(:)];
+        fwrite(fid, temp, DataType);
+    end
 end
-fclose(fid);
 
+fclose(fid);
+    
 IsSucess=1;
 
 end

@@ -79,11 +79,15 @@ end
 IsSucess=1;
 end
 
-function Status=WaitForResult(this, Taskhandle)
+function Status=WaitForResult(this, Taskhandle, TimeOut)
 % check if there is M:/CompletedTasks/Taskhandle
 % wait within 60 seconds
 
 Status=0;
+
+if nargin == 2
+    TimeOut=60;
+end
 
 t1=clock;
 
@@ -105,7 +109,7 @@ while 1
     
     interval=sec+min*60+hour*60*60+day*60*60*60+month*60*60*60*60+year*60*60*60*60*60;
     
-    if interval > 60
+    if interval > TimeOut
         break
     end
     

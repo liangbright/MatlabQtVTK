@@ -1,6 +1,9 @@
 function Result = vtkshowsliceofvolume(FigureHandle, VolumeHandle, Plane, IntensityDisplayRange)
 % Plane.Origin=[x1,y1,z1]
 % Plane.Normal=[x2,y2,z2]
+% matlab Image(y+1,x+1,z+1) is the voxel at (x,y,z) 
+% Image(1,1,1) is the Origin (0,0,0) 
+% Origin is (0,0,0)
 
 Result=[];
 %%

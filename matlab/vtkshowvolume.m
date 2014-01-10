@@ -1,4 +1,4 @@
-function Result = vtkshowvolume(FigureHandle, Volume, IntensityDisplayRange)
+function Result = vtkshowvolume(FigureHandle, Volume, IntensityDisplayRange, Origin, Spacing)
 
 Result=[];
 %%
@@ -6,21 +6,44 @@ Command='vtkshowvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 if nargin == 2
+    IntensityDisplayRange=[];
+    Origin=[];
+    Spacing=[];
+end
+if nargin == 3
+    Origin=[];
+    Spacing=[];
+end
+if nargin == 4
+    Spacing=[];
+end
+%%
+if isempty(IntensityDisplayRange)
     DisplayRange=[num2str(min(Volume(:)), '%10.10f') ',' num2str(max(Volume(:)), '%10.10f')];
 else
     DisplayRange=[num2str(IntensityDisplayRange(1), '%10.10f') ',' num2str(IntensityDisplayRange(2), '%10.10f')];   
 end
-%%
+
+% matlab Volume(y+1,x+1,z+1) is the voxel at (x,y,z) 
+% Volume(1,1,1) is the voxel at Origin (0,0,0) 
+% Origin is (0,0,0) in world coordinate system
+if isempty(Origin)
+    ImageOrigin='0, 0, 0';
+else
+    ImageOrigin=[num2str(Origin(1),'%10.10f'), ',',  num2str(Origin(2),'%10.10f'), ',', num2str(Origin(3),'%10.10f')];
+end
+
+if isempty(Spacing)
+    ImageSpacing='1, 1, 1';
+else
+    ImageSpacing=[num2str(Spacing(1),'%10.10f'), ',',  num2str(Spacing(2),'%10.10f'), ',', num2str(Spacing(3),'%10.10f')];
+end
+
 [Ly, Lx, Lz]=size(Volume);
-
-% matlab Image(y,x,z) Origin is always (1,1,1) 
-Origin=[num2str(1, '%d') ',' num2str(1, '%d') ',' num2str(1, '%d')];
-
 ImageSize=[num2str(int32(Lx), '%d') ',' num2str(int32(Ly), '%d') ',' num2str(int32(Lz), '%d')];
 
 ImageDataFileName='ImageData.image';
 FileType='image';
-
 DataType='double';
 
 ResultFileName='Result.json';
@@ -31,7 +54,8 @@ Task.Taskhandle=Taskhandle;
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
            {'ImageSize', ImageSize}, ...
-           {'Origin', Origin}, ...
+           {'ImageOrigin', ImageOrigin}, ...
+           {'ImageSpacing', ImageSpacing}, ...
            {'ImageDataFileName', ImageDataFileName}, ...
            {'DataType', DataType},...
            {'IntensityDisplayRange', DisplayRange},...

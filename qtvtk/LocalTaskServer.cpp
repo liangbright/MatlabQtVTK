@@ -79,7 +79,12 @@ void LocalTaskServer::test()
 		points->InsertPoint(i, double(i), double(i), double(i));
 	}
 
-	auto PointProp = Figure->PlotPoint(points);
+	auto PointData = vtkPolyData::New();
+
+	PointData->SetPoints(points);
+	points->Delete();
+
+	auto PointProp = Figure->PlotPoint(PointData);
 
 	std::cout << "PointProp Handle: " << PointProp << std::endl;
 

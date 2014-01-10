@@ -1,6 +1,5 @@
 function Result = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
-
-%MeshColorName
+% MeshColorName:
 % white
 % black
 % read
@@ -14,7 +13,7 @@ function Result = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
 % darkred
 % purple
 % wheat
-
+%% ---------------------------------------------------------------------
 Result=[];
 
 if isa(Mesh, 'PolyMeshClass')

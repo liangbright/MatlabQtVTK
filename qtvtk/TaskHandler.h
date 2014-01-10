@@ -7,7 +7,6 @@
 #include <qmap.h>
 #include <QTime>
 
-#include <vtkSmartPointer.h>
 #include <vtkType.h>
 
 #include <functional>
@@ -161,9 +160,9 @@ private:
 
 	//------------- Read Data From File ---------------------------------------------//
 
-	bool ReadPointData(QString FilePathAndName, int PointNum, QString DataType, vtkPoints*& PointData);
+	bool ReadPointData(QString FilePathAndName, int PointNum, QString DataType, vtkPolyData*& PointData);
 
-	bool ReadImageData(QString FilePathAndName, const int ImageSize[3], QString DataType, vtkImageData*& ImageData);
+	bool ReadLineData(QString FilePathAndName, int LineNum, int TotalPointNum, QString DataType, vtkPolyData*& LineData);
 	
 	bool ReadPolyMeshData_From_INP(QString FilePathAndName, vtkPolyData*& MeshData);
 
@@ -181,31 +180,35 @@ private:
 
 	bool ReadTriangleMeshTriangleData(QString FilePathAndName, int TriangleNum, vtkCellArray*& TriangleData);
 
+	bool ReadImageData(QString FilePathAndName, const int ImageSize[3], QString DataType, vtkImageData*& ImageData);
+
 	//----------------------- process matlab command -------------------//
 
 	bool run_vtkfigure(const TaskInformation& TaskInfo);
-
-	//---------------------------------------
+	//----------------------------------------------------------
 
 	bool run_vtkshowaxes(const TaskInformation& TaskInfo);
-
-	//---------------------------------------
+	//----------------------------------------------------------
 
 	bool run_vtkplotpoint(const TaskInformation& TaskInfo);
-	//---------------------------------------
+	//----------------------------------------------------------
+
+	bool run_vtkplotline(const TaskInformation& TaskInfo);
+	//----------------------------------------------------------
+
+	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);
+	//----------------------------------------------------------
+	
+	bool run_vtkshowtrianglemesh(const TaskInformation& TaskInfo);
+	//----------------------------------------------------------
 
 	bool run_vtkshowvolume(const TaskInformation& TaskInfo);
 
-	bool ReadVolumeProperty(QJsonObject PropertyObject, vtkVolumeProperty* VolumeProperty);	
+	bool ReadVolumeProperty(const QJsonObject& PropertyObject, vtkVolumeProperty*& VolumeProperty);
+	//----------------------------------------------------------
 
 	bool run_vtkshowsliceofvolume(const TaskInformation& TaskInfo);
-	//---------------------------------------
-
-	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);
-	//---------------------------------------
-	
-	bool run_vtkshowtrianglemesh(const TaskInformation& TaskInfo);
-	//---------------------------------------
+	//----------------------------------------------------------
 
 	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);
 	//----------------------------------------------------------//

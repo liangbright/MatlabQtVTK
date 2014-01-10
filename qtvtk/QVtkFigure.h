@@ -101,11 +101,21 @@ public:
 
 	//---------------------------------------------------------------------
 
-	quint64 PlotPoint(vtkPoints* PointData);
+	quint64 PlotPoint(vtkPolyData* PointData);
 
-	vtkProp* CreatePointProp(vtkPoints* PointData);
-
+	vtkProp* CreatePointProp(vtkPolyData* PointData);
 	//---------------------------------------------------------------------
+
+	quint64 PlotLine(vtkPolyData* LineData);
+
+	vtkProp* CreateLineProp(vtkPolyData*LineData);
+	//---------------------------------------------------------------------
+
+	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData);
+
+	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData);
+	//---------------------------------------------------------------------
+
 	quint64 ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty = nullptr);
 
 	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty);
@@ -113,7 +123,6 @@ public:
 	vtkVolumeProperty* CreateDefaultVolumeProperty(const double DataRange[2]);
 
 	QString GetDefaultRenderMethod();
-
 	//----------------------------------------------------------------------
 
 	quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty = nullptr);
@@ -124,14 +133,6 @@ public:
 	//----------------------------------------------------------------------
 
 	bool ResliceVolume(quint64 VolumePropHandle);
-
-	//---------------------------------------------------------------------
-
-	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData);
-
-	vtkProp* CreatePloyMeshProp(vtkPolyData* MeshData);
-	//----------------------------------------------------------------------
-
 signals:
 	void UserCloseFigure();
 
