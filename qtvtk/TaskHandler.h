@@ -220,7 +220,7 @@ private:
 	bool run_vtkshowsliceofvolume(const TaskInformation& TaskInfo);
 	//----------------------------------------------------------
 
-	bool run_vtkdeleteprop(const TaskInformation& TaskInfo);
+	bool run_vtkremoveprop(const TaskInformation& TaskInfo);
 	//----------------------------------------------------------//
 	
 	bool WriteTaskFailureInfo(const TaskInformation& TaskInfo, QString ResultFileName, QString FailureInfo);

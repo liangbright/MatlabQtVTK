@@ -92,7 +92,7 @@ public:
 
 	void AddProp(PropInfomration PropInfo);
 
-	void RemoveProp(quint64 PropHandle);
+	bool RemoveProp(quint64 PropHandle);
 
 	quint64 GeneratePropHandle();
 

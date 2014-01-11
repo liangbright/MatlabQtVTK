@@ -14,6 +14,8 @@ tic
 Result2 = vtkplotpoint(FigureHandle, 'PointAAA', Point,  Color);
 toc
 %%
+[handle, Result] = vtkremoveprop(Result2.FigureHandle, Result2.PropHandle);
+%%
 Line=[0 1 2 3 4 5 6 7 8 9 10 11 12
       0 1 2 3 4 5 6 7 8 9 10 11 12
       0 1 2 3 4 5 6 7 8 9 10 11 12];

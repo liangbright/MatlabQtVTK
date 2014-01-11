@@ -4,13 +4,11 @@ IsSucess=0;
 
 fid = fopen(FullFileName, 'w');
 if fid == -1
-    disp('can not open task file')
+    disp('can not open text file @ WriteTaskText')
     return
 end
 
-fprintf(fid, '{\n');
-
-Prefix='';
+fprintf(fid, '{\r\n');
 
 ElementNum=length(TaskText);
 
@@ -19,9 +17,9 @@ for n=1:ElementNum
     [~, L]=size(Element);
     if  L == 2      
         if n < ElementNum
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' ',\r\n'];
+            TextLine=['"' Element{1} '"' ': ' '"' Element{2} '"' ',\r\n'];
         else
-            TextLine=[Prefix '"' Element{1} '"' ': ' '"' Element{2} '"' '\r\n'];
+            TextLine=['"' Element{1} '"' ': ' '"' Element{2} '"' '\r\n'];
         end
         fprintf(fid, TextLine);        
     else
@@ -31,7 +29,7 @@ for n=1:ElementNum
     end
 end
 
-fprintf(fid, '}\n');
+fprintf(fid, '}\r\n');
 
 fclose(fid);
 

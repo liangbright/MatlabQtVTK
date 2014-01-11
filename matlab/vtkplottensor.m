@@ -6,6 +6,8 @@ Result=[];
 Command='vtkplottensor';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
+FigureHandle=num2str(FigureHandle, '&d');
+
 if isempty(PropName)
     PropName='';
 end

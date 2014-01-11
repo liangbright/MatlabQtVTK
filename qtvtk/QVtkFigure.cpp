@@ -258,7 +258,7 @@ void QVtkFigure::AddProp(PropInfomration PropInfo)
 }
 
 
-void QVtkFigure::RemoveProp(quint64 PropHandle)
+bool QVtkFigure::RemoveProp(quint64 PropHandle)
 {
 	auto it = m_PropRecord.find(PropHandle);
 	if (it != m_PropRecord.end())
@@ -277,7 +277,11 @@ void QVtkFigure::RemoveProp(quint64 PropHandle)
 		m_PropRecord.erase(it);
 
 		this->Refresh();
+
+		return true;
 	}
+
+	return false;
 }
 
 
@@ -392,7 +396,7 @@ bool QVtkFigure::ExtractPropColor(vtkDataObject* DataObject, double Color[3])
 quint64 QVtkFigure::PlotPoint(vtkPolyData* PointData)
 {
 	auto Prop = this->CreatePointProp(PointData);
-
+	//--------------------------------------------------------------------------------
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
@@ -408,11 +412,11 @@ quint64 QVtkFigure::PlotPoint(vtkPolyData* PointData)
 	{
 		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
 	}
-	//------------------------------------------------------------------------------
 
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = PointData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -474,7 +478,7 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPolyData* PointData)
 quint64 QVtkFigure::PlotLine(vtkPolyData* LineData)
 {
 	auto Prop = this->CreateLineProp(LineData);
-
+	//--------------------------------------------------------------------------------
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
@@ -494,6 +498,7 @@ quint64 QVtkFigure::PlotLine(vtkPolyData* LineData)
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = LineData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -527,7 +532,7 @@ vtkProp* QVtkFigure::CreateLineProp(vtkPolyData* LineData)
 quint64 QVtkFigure::PlotVector(vtkPolyData* VectorData)
 {
 	auto Prop = this->CreateVectorProp(VectorData);
-
+	//--------------------------------------------------------------------------------
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
@@ -547,6 +552,7 @@ quint64 QVtkFigure::PlotVector(vtkPolyData* VectorData)
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = VectorData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -597,7 +603,7 @@ vtkProp* QVtkFigure::CreateVectorProp(vtkPolyData* VectorData)
 quint64 QVtkFigure::PlotTensor(vtkPolyData* TensorData)
 {
 	auto Prop = this->CreateVectorProp(TensorData);
-
+	//--------------------------------------------------------------------------------
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
@@ -617,6 +623,7 @@ quint64 QVtkFigure::PlotTensor(vtkPolyData* TensorData)
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = TensorData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -664,6 +671,7 @@ vtkProp* QVtkFigure::CreateTensorProp(vtkPolyData* TensorData)
 quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 {
 	auto Prop = this->CreatePloyMeshProp(MeshData);
+	//--------------------------------------------------------------------------------
 
 	PropInfomration PropInfo;
 
@@ -684,6 +692,7 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = MeshData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -715,7 +724,7 @@ vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData)
 quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty)
 {
 	auto Prop = this->CreateVolumeProp(VolumeData, VolumeProperty);
-
+	//--------------------------------------------------------------------------------
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
@@ -735,6 +744,7 @@ quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* Volu
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = VolumeData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 
@@ -926,6 +936,7 @@ quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SliceP
 	PropInfo.Prop = Prop;
 
 	PropInfo.DataSource = VolumeData;
+	//--------------------------------------------------------------------------------
 
 	this->AddProp(PropInfo);
 

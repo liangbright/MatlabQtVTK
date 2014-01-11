@@ -86,9 +86,9 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkshowsliceofvolume);
 
-	Commmand = "vtkdeleteprop";
+	Commmand = "vtkremoveprop";
 	m_MatlabCommandList.append(Commmand);
-	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkdeleteprop);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkremoveprop);
 	
 }
 
@@ -2057,12 +2057,107 @@ bool TaskHandler::run_vtkshowsliceofvolume(const TaskInformation& TaskInfo)
 }
 
 
-bool TaskHandler::run_vtkdeleteprop(const TaskInformation& Task)
+bool TaskHandler::run_vtkremoveprop(const TaskInformation& TaskInfo)
 {
+	qDebug() << "run_vtkremoveprop";
 
+	QFile TaskFile(TaskInfo.GetFilePathAndName());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some info ----------------------------------------//
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	//get FigureHandle
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//check FigureHandle
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//get PropHandle
+	quint64 PropHandle = 0; // invalid handle
+	it = TaskObject.find("PropHandle");
+	if (it != TaskObject.end())
+	{
+		PropHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "PropHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	// ----------------------- delete Prop  -------------------------------------------//
+	auto IsOK = Figure->RemoveProp(PropHandle);
+	if (IsOK == 0)
+	{
+		QString FailureInfo = "Can not run  Figure->RemoveProp";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//---------------------- Write Result ----------------------------------------//
+	std::vector<NameValuePair> PairList;
+
+	NameValuePair Pair;
+
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	Pair.Name = "PropHandle";
+	Pair.Value = QString::number(PropHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
 	//-----------------------------Done---------------------------------------------------//
 	return true;
 }
+
 
 
 bool TaskHandler::RunTask(TaskInformation& TaskInfo)
