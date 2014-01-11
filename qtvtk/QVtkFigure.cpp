@@ -14,12 +14,16 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
 #include <vtkFieldData.h>
+#include <vtkStringArray.h>
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 #include <vtkSphereSource.h>
 #include <vtkGlyph3D.h>
+#include <vtkTensorGlyph.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkConeSource.h>
 #include <vtkLineSource.h>
+#include <vtkArrowSource.h>
 #include <vtkImageProperty.h>
 #include <vtkVolumeProperty.h>
 #include <vtkColorTransferFunction.h>
@@ -326,7 +330,7 @@ quint64 QVtkFigure::ShowAxes()
 
 	PropInfo.Name = "Axes";
 
-	PropInfo.NameOnMenu = "Axes(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.NameOnMenu = "Axes (Handle = " + QString::number(PropInfo.Handle) + ")";
 
 	PropInfo.Prop = axes;
 
@@ -335,6 +339,49 @@ quint64 QVtkFigure::ShowAxes()
 	return PropInfo.Handle;
 }
 
+
+//------------------ Get PropName ----------------------------------------------------------
+//
+QString QVtkFigure::ExtractPropName(vtkDataObject* DataObject)
+{
+	QString PropName;
+
+	auto FiledPtr = DataObject->GetFieldData();
+
+    auto Num = FiledPtr->GetNumberOfArrays();
+    for (int i = 0; i<Num; ++i)
+    {
+	    auto Name = QString(FiledPtr->GetArrayName(i));
+		if (Name == "PropName")
+		{
+			auto StrPtr = static_cast<vtkStringArray*>(FiledPtr->GetAbstractArray(i));
+			PropName = StrPtr->GetValue(0);
+			break;
+		}
+	}
+
+	return PropName;
+}
+
+//------------------ Get PropColor ----------------------------------------------------------
+//
+bool QVtkFigure::ExtractPropColor(vtkDataObject* DataObject, double Color[3])
+{
+	auto FiledPtr = DataObject->GetFieldData();
+
+	auto Num = FiledPtr->GetNumberOfArrays();
+	for (int i = 0; i<Num; ++i)
+	{
+		auto Name = QString(FiledPtr->GetArrayName(i));
+		if (Name == "PropColor")
+		{
+			FiledPtr->GetArray(i)->GetTuple(0, Color);
+			return true;
+		}
+	}
+
+	return false;
+}
 
 //===================================== Plot Point =====================================
 // Input:
@@ -352,7 +399,16 @@ quint64 QVtkFigure::PlotPoint(vtkPolyData* PointData)
 
 	PropInfo.Name = "Point";
 
-	PropInfo.NameOnMenu = "Points(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.NameOnMenu = this->ExtractPropName(PointData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Points (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	//------------------------------------------------------------------------------
 
 	PropInfo.Prop = Prop;
 
@@ -391,18 +447,8 @@ vtkProp* QVtkFigure::CreatePointProp(vtkPolyData* PointData)
 
 	//---------------------- set color -------------------------------------------
 	double ColorValue[3] = { 1, 1, 1 }; //white default;
+	this->ExtractPropColor(PointData, ColorValue);
 
-	auto FiledPtr = PointData->GetFieldData();
-
-	auto Num = FiledPtr->GetNumberOfArrays();
-	if (Num > 0)
-	{
-		auto Name = QString(FiledPtr->GetArrayName(0));
-		if (Name == "Color")
-		{
-			FiledPtr->GetArray(0)->GetTuple(0, ColorValue);
-		}
-	}
 
 	GlyphActor->GetProperty()->SetColor(ColorValue);
 	//-----------------------------------------------------------------
@@ -435,7 +481,15 @@ quint64 QVtkFigure::PlotLine(vtkPolyData* LineData)
 
 	PropInfo.Name = "Line";
 
-	PropInfo.NameOnMenu = "Lines(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.NameOnMenu = this->ExtractPropName(LineData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Points (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
 
 	PropInfo.Prop = Prop;
 
@@ -460,18 +514,7 @@ vtkProp* QVtkFigure::CreateLineProp(vtkPolyData* LineData)
 
 	//----------------------- set color ----------------------------------
 	double ColorValue[3] = { 1, 1, 1 }; //white default;
-
-	auto FiledPtr = LineData->GetFieldData();
-
-	auto Num = FiledPtr->GetNumberOfArrays();
-	if (Num > 0)
-	{
-		auto Name = QString(FiledPtr->GetArrayName(0));
-		if (Name == "Color")
-		{
-			FiledPtr->GetArray(0)->GetTuple(0, ColorValue);
-		}
-	}
+	this->ExtractPropColor(LineData, ColorValue);
 
 	LineProp->GetProperty()->SetColor(ColorValue);
 	//---------------------------------------------------------------------
@@ -479,6 +522,143 @@ vtkProp* QVtkFigure::CreateLineProp(vtkPolyData* LineData)
 	return LineProp;
 }
 
+//======================================= Plot Vector ==============================================================
+//
+quint64 QVtkFigure::PlotVector(vtkPolyData* VectorData)
+{
+	auto Prop = this->CreateVectorProp(VectorData);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Vector";
+
+	PropInfo.NameOnMenu = this->ExtractPropName(VectorData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Vectors (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+
+	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = VectorData;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
+}
+
+
+vtkProp* QVtkFigure::CreateVectorProp(vtkPolyData* VectorData)
+{
+	auto arrow = vtkSmartPointer<vtkArrowSource>::New();
+
+	auto glyphs = vtkSmartPointer<vtkGlyph3D>::New();
+
+	glyphs->SetInputData(0, VectorData);
+
+	VectorData->Delete();
+
+	glyphs->SetInputConnection(1, arrow->GetOutputPort());
+
+	glyphs->ScalingOn();
+	glyphs->SetScaleModeToScaleByVector();
+
+	glyphs->OrientOn();
+	glyphs->ClampingOff();
+	glyphs->SetVectorModeToUseVector();
+	glyphs->SetIndexModeToOff();
+
+	auto glyphMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+
+	glyphMapper->SetInputConnection(glyphs->GetOutputPort());
+
+	auto glyphActor = vtkActor::New();
+
+	glyphActor->SetMapper(glyphMapper);
+
+	//----------------------- set color ----------------------------------
+	double ColorValue[3] = { 1, 1, 1 }; //white default;
+	this->ExtractPropColor(VectorData, ColorValue);
+
+	glyphActor->GetProperty()->SetColor(ColorValue);
+	//---------------------------------------------------------------------
+
+	return glyphActor;
+}
+
+//======================================= Plot Tensor ==============================================================
+//
+quint64 QVtkFigure::PlotTensor(vtkPolyData* TensorData)
+{
+	auto Prop = this->CreateVectorProp(TensorData);
+
+	PropInfomration PropInfo;
+
+	PropInfo.Handle = this->GeneratePropHandle();
+
+	PropInfo.Name = "Tensor";
+
+	PropInfo.NameOnMenu = this->ExtractPropName(TensorData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Tensors (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+
+	PropInfo.Prop = Prop;
+
+	PropInfo.DataSource = TensorData;
+
+	this->AddProp(PropInfo);
+
+	return PropInfo.Handle;
+}
+
+
+vtkProp* QVtkFigure::CreateTensorProp(vtkPolyData* TensorData)
+{
+	auto source = vtkSmartPointer<vtkSphereSource>::New();
+
+	auto glyphs = vtkSmartPointer<vtkTensorGlyph>::New();
+
+	glyphs->SetInputData(0, TensorData);
+
+	TensorData->Delete();
+
+	glyphs->SetInputConnection(1, source->GetOutputPort());
+
+	glyphs->ColorGlyphsOn();
+
+	auto normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+
+	normals->SetInputConnection(glyphs->GetOutputPort());
+
+	auto glyphMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+
+	glyphMapper->SetInputConnection(normals->GetOutputPort());
+
+	auto glyphActor = vtkActor::New();
+
+	glyphActor->SetMapper(glyphMapper);
+
+	//----------------------- set color ----------------------------------
+	double ColorValue[3] = { 1, 1, 1 }; //white default;
+	this->ExtractPropColor(TensorData, ColorValue);
+
+	glyphActor->GetProperty()->SetColor(ColorValue);
+	//---------------------------------------------------------------------
+
+	return glyphActor;
+}
 
 //======================================= Show Mesh ==============================================================
 quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
@@ -491,7 +671,15 @@ quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData)
 
 	PropInfo.Name = "Mesh";
 
-	PropInfo.NameOnMenu = "Mesh(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.NameOnMenu = this->ExtractPropName(MeshData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Mesh (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
 
 	PropInfo.Prop = Prop;
 
@@ -516,18 +704,7 @@ vtkProp* QVtkFigure::CreatePloyMeshProp(vtkPolyData* MeshData)
 
 	//----------------------- set color ------------------------------------
 	double ColorValue[3] = { 1, 1, 1 }; //white default;
-
-	auto FiledPtr = MeshData->GetFieldData();
-
-	auto Num = FiledPtr->GetNumberOfArrays();
-	if (Num > 0)
-	{
-		auto Name = QString(FiledPtr->GetArrayName(0));
-		if (Name == "Color")
-		{
-			FiledPtr->GetArray(0)->GetTuple(0, ColorValue);
-		}
-	}
+	this->ExtractPropColor(MeshData, ColorValue);
 
 	MeshProp->GetProperty()->SetColor(ColorValue);
 
@@ -545,7 +722,15 @@ quint64 QVtkFigure::ShowVolume(vtkImageData* VolumeData, vtkVolumeProperty* Volu
 
 	PropInfo.Name = "Volume";
 
-	PropInfo.NameOnMenu = "Volume(" + QString::number(PropInfo.Handle) + ")";
+	PropInfo.NameOnMenu = this->ExtractPropName(VolumeData);
+	if (PropInfo.NameOnMenu == "")
+	{
+		PropInfo.NameOnMenu.append("Volume (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
+	else
+	{
+		PropInfo.NameOnMenu.append(" (Handle = " + QString::number(PropInfo.Handle) + ")");
+	}
 
 	PropInfo.Prop = Prop;
 
@@ -692,7 +877,8 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRang
 }
 
 
-quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty)
+quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, QString SliceName, 
+	                                  vtkImageProperty* ImageProperty)
 {
 	auto it = m_PropRecord.find(VolumePropHandle);
 	if (it == m_PropRecord.end())
@@ -714,13 +900,28 @@ quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SliceP
 
 	auto Prop = this->CreateSliceOfVolumeProp(VolumeData, SlicePlane, ImageProperty);
 
+	//--------------------------------------------------------------------------
+
 	PropInfomration PropInfo;
 
 	PropInfo.Handle = this->GeneratePropHandle();
 
 	PropInfo.Name = "SliceOfVolume";
 
-	PropInfo.NameOnMenu = "SliceOfVolume(" + QString::number(PropInfo.Handle) + ")";
+	auto VolumePropName = this->ExtractPropName(VolumeData);
+	if (VolumePropName == "")
+	{
+		VolumePropName = "Volume";
+	}
+
+	if (SliceName == "")
+	{
+		PropInfo.NameOnMenu = "Slice Of " + VolumePropName + " (Handle = " + QString::number(PropInfo.Handle) + ")";
+	}
+	else
+	{
+		PropInfo.NameOnMenu = SliceName + " Of " + VolumePropName + " (Handle = " + QString::number(PropInfo.Handle) + ")";
+	}
 
 	PropInfo.Prop = Prop;
 

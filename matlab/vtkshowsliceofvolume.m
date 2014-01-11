@@ -1,4 +1,4 @@
-function Result = vtkshowsliceofvolume(FigureHandle, VolumeHandle, Plane, IntensityDisplayRange)
+function Result = vtkshowsliceofvolume(FigureHandle, VolumeHandle, PropName, Plane, IntensityDisplayRange)
 % Plane.Origin=[x1,y1,z1]
 % Plane.Normal=[x2,y2,z2]
 % matlab Image(y+1,x+1,z+1) is the voxel at (x,y,z) 
@@ -10,6 +10,10 @@ Result=[];
 Command='vtkshowsliceofvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
+if isempty(PropName)
+    PropName='';
+end
+
 DisplayRange=[num2str(IntensityDisplayRange(1), '%10.10f') ',' num2str(IntensityDisplayRange(2), '%10.10f')];   
 
 %origin, normal;
@@ -23,6 +27,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'PropName', PropName}, ...
            {'VolumeHandle', VolumeHandle}, ...
            {'SlicePlane', SlicePlane}, ...
            {'IntensityDisplayRange', DisplayRange},...

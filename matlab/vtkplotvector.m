@@ -1,24 +1,24 @@
-function Result = vtkplotpoint(FigureHandle, PropName, Point, Color)
-
+function Result = vtkplotvector(FigureHandle, PropName, VectorData, Color)
+% plot each Vector=VectorData([1,2,3],n) at Position=VectorData([4,5,6],n) in Color
+% 
 Result=[];
 %%
-Command='vtkplotpoint';
+Command='vtkplotvector';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 if isempty(PropName)
     PropName='';
 end
 
-[~, Num]=size(Point);
+[~, VectorNum]=size(VectorData);
+VectorNum=num2str(VectorNum, '%d');
 
-PointNum=num2str(int64(Num), '%d');
-
-PointColorValue=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
+VectorColorValue=[num2str(Color(1), '%f') ',' num2str(Color(2), '%f') ',' num2str(Color(3), '%f')];
 
 FileType='raw';
-PointDataFileName='PointData.raw';
+VectorDataFileName='VectorData.raw';
 
-PointDataType='double';
+VectorDataType='double';
 
 ResultFileName='Result.json';
 %----------------------------------------------------------------------------------
@@ -28,13 +28,13 @@ Task.Taskhandle=Taskhandle;
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
            {'PropName', PropName}, ...
-           {'PointNum', PointNum}, ...
-           {'PointColorValue', PointColorValue}, ...      
-           {'PointDataFileName', PointDataFileName}, ...
-           {'PointDataType', PointDataType},...
+           {'VectorNum', VectorNum}, ...
+           {'VectorColorValue', VectorColorValue}, ...      
+           {'VectorDataFileName', VectorDataFileName}, ...
+           {'VectorDataType', VectorDataType},...
            {'ResultFileName', ResultFileName}};
        
-Task.Data={{PointDataFileName, FileType, PointDataType, Point}};
+Task.Data={{VectorDataFileName, FileType, VectorDataType, VectorData}};
 
 %%
 Client = MatlabClientClass;

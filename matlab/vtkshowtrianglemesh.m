@@ -1,4 +1,4 @@
-function Result = vtkshowtrianglemesh(FigureHandle, Mesh, MeshColorName)
+function Result = vtkshowtrianglemesh(FigureHandle, PropName, Mesh, MeshColorName)
 
 Result=[];
 
@@ -12,6 +12,10 @@ end
 Command='vtkshowtrianglemesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
+if isempty(PropName)
+    PropName='';
+end
+
 DataFileType='raw';
 
 [~, PointNum]=size(MeshFile.Point);
@@ -36,6 +40,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'PropName', PropName}, ...
            {'MeshColorName', MeshColorName}, ...
            {'PointNum', PointNum}, ...
            {'PointDataType', PointDataType}, ...

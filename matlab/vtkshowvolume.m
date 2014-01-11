@@ -1,21 +1,25 @@
-function Result = vtkshowvolume(FigureHandle, Volume, IntensityDisplayRange, Origin, Spacing)
+function Result = vtkshowvolume(FigureHandle, PropName, Volume, IntensityDisplayRange, Origin, Spacing)
 
 Result=[];
 %%
 Command='vtkshowvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
-if nargin == 2
+if nargin == 3
     IntensityDisplayRange=[];
     Origin=[];
     Spacing=[];
 end
-if nargin == 3
+if nargin == 4
     Origin=[];
     Spacing=[];
 end
-if nargin == 4
+if nargin == 5
     Spacing=[];
+end
+%%
+if isempty(PropName)
+    PropName='';
 end
 %%
 if isempty(IntensityDisplayRange)
@@ -53,6 +57,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'PropName', PropName}, ...
            {'ImageSize', ImageSize}, ...
            {'ImageOrigin', ImageOrigin}, ...
            {'ImageSpacing', ImageSpacing}, ...

@@ -12,7 +12,10 @@
 #include <vtkCellArray.h>
 #include <vtkImageData.h>
 #include <vtkDoubleArray.h>
+#include <vtkStringArray.h>
+#include <vtkStdString.h>
 #include <vtkFieldData.h>
+#include <vtkPointData.h>
 #include <vtkPlane.h>
 #include <vtkVolumeProperty.h>
 
@@ -58,6 +61,14 @@ void TaskHandler::CreateMatlabCommandTranslator()
 	Commmand = "vtkplotline";
 	m_MatlabCommandList.append(Commmand);
 	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplotline);
+	
+    Commmand = "vtkplotvector";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplotvector);
+
+	Commmand = "vtkplottensor";
+	m_MatlabCommandList.append(Commmand);
+	m_MatlabCommandTranslator[Commmand] = std::mem_fn(&TaskHandler::run_vtkplottensor);
 
 	Commmand = "vtkshowpolymesh";
 	m_MatlabCommandList.append(Commmand);
@@ -398,6 +409,39 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	//get PropName if it is in the file ----------------------------------------------------------
+	QString  PropName; // ""
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get Color if it is specified in the file ---------------------
+	double PointColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("PointColorName");
+	if (it != TaskObject.end())
+	{
+		auto PointColorName = it.value().toString();
+		TaskHandler::GetRBGColorByName(PointColorName, PointColorValue);
+	}
+	else
+	{
+		it = TaskObject.find("PointColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				PointColorValue[0] = ColorValueList.at(0).toDouble();
+				PointColorValue[1] = ColorValueList.at(1).toDouble();
+				PointColorValue[2] = ColorValueList.at(2).toDouble();
+			}
+		}
+	}
+
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -437,7 +481,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	// load line data ----------------------------------------------------------------
+	// load point data ----------------------------------------------------------------
 	QString DataFilePathAndName = TaskInfo.GetFilePath() + PointDataFileName;
 
 	qDebug() << "Read Point Data from " << DataFilePathAndName;
@@ -454,36 +498,20 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 
 	qDebug() << "Point Data is loaded";
 
-	// get LineColor if it is specified in the file ---------------------
-	double PointColorValue[3] = { 1, 1, 1 };//white
+	// set name and color carried in FieldData of PointData----------------------------
+	std::string tempNameStr = PropName.toStdString();
 
-	it = TaskObject.find("PointColorName");
-	if (it != TaskObject.end())
-	{
-		auto PointColorName = it.value().toString();
-		TaskHandler::GetRBGColorByName(PointColorName, PointColorValue);
-	}
-	else
-	{
-		it = TaskObject.find("PointColorValue");
-		if (it != TaskObject.end())
-		{
-			auto ColorValueList = it.value().toString().split(",");
-			auto tempsize = ColorValueList.size();
-			if (tempsize == 3)
-			{
-				PointColorValue[0] = ColorValueList.at(0).toDouble();
-				PointColorValue[1] = ColorValueList.at(1).toDouble();
-				PointColorValue[2] = ColorValueList.at(2).toDouble();
-			}
-		}
-	}
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
 
-	// set color carried in FieldData of MeshData----------------------------
+	PointData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
+
 	auto tempColor = vtkDoubleArray::New();
-
 	tempColor->SetNumberOfComponents(3);
-	tempColor->SetName("Color");
+	tempColor->SetName("PropColor");
 	tempColor->InsertNextTuple(PointColorValue);
 
 	PointData->GetFieldData()->AddArray(tempColor);
@@ -493,7 +521,7 @@ bool TaskHandler::run_vtkplotpoint(const TaskInformation& TaskInfo)
 	auto PropHandle = Figure->PlotPoint(PointData);
 	if (PropHandle == 0)
 	{
-		QString FailureInfo = "Can not run  Figure->PlotPoint";
+		QString FailureInfo = "Can not run Figure->PlotPoint";
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
@@ -579,6 +607,44 @@ bool TaskHandler::run_vtkplotline(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get LineColor  ------------------------------------------------------
+	double LineColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("LineColorName");
+	if (it != TaskObject.end())
+	{
+		auto LineColorName = it.value().toString();
+		this->GetRBGColorByName(LineColorName, LineColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
+
+		it = TaskObject.find("LineColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				LineColorValue[0] = ColorValueList.at(0).toDouble();
+				LineColorValue[1] = ColorValueList.at(1).toDouble();
+				LineColorValue[2] = ColorValueList.at(2).toDouble();
+
+				IscolorOK = true;
+			}
+		}
+	}
+
 	// get LineNum ------------------------------------------------------
 	int LineNum = 0;
 	it = TaskObject.find("LineNum");
@@ -649,41 +715,21 @@ bool TaskHandler::run_vtkplotline(const TaskInformation& TaskInfo)
 
 	qDebug() << "Line Data is loaded";
 
-	// get LineColor  ------------------------------------------------------
-	double LineColorValue[3] = { 1, 1, 1 };//white
+	// set name and color  in FieldData of LineData ---------------------------------
+	std::string tempNameStr = PropName.toStdString();
 
-	it = TaskObject.find("LineColorName");
-	if (it != TaskObject.end())
-	{
-		auto LineColorName = it.value().toString();
-		TaskHandler::GetRBGColorByName(LineColorName, LineColorValue);
-	}
-	else
-	{
-		// Get Color if it is specified in the file
-		bool IscolorOK = false;
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
 
-		it = TaskObject.find("LineColorValue");
-		if (it != TaskObject.end())
-		{
-			auto ColorValueList = it.value().toString().split(",");
-			auto tempsize = ColorValueList.size();
-			if (tempsize == 3)
-			{
-				LineColorValue[0] = ColorValueList.at(0).toDouble();
-				LineColorValue[1] = ColorValueList.at(1).toDouble();
-				LineColorValue[2] = ColorValueList.at(2).toDouble();
+	LineData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
 
-				IscolorOK = true;
-			}
-		}
-	}
-
-	// set color carried in FieldData of MeshData
 	auto tempColor = vtkDoubleArray::New();
 
 	tempColor->SetNumberOfComponents(3);
-	tempColor->SetName("Color");
+	tempColor->SetName("PropColor");
 	tempColor->InsertNextTuple(LineColorValue);
 
 	LineData->GetFieldData()->AddArray(tempColor);
@@ -693,7 +739,416 @@ bool TaskHandler::run_vtkplotline(const TaskInformation& TaskInfo)
 	auto PropHandle = Figure->PlotLine(LineData);
 	if (PropHandle == 0)
 	{
-		QString FailureInfo = "Can not run  Figure->PlotLine";
+		QString FailureInfo = "Can not run Figure->PlotLine";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+	//---------------------- Write Result ----------------------------------------//
+
+	std::vector<NameValuePair> PairList;
+
+	NameValuePair Pair;
+
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	Pair.Name = "PropHandle";
+	Pair.Value = QString::number(PropHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+
+	return true;
+}
+
+bool TaskHandler::run_vtkplotvector(const TaskInformation& TaskInfo)
+{
+	qDebug() << "run_vtkplotvector";
+
+	QFile TaskFile(TaskInfo.GetFilePathAndName());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+	//----------------------------------------------------------//
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some Information from Task.json ----------------------------------//
+
+	// get ResultFileName ----------------------------------------------------------
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	//get FigureHandle ----------------------------------------------------------
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//check FigureHandle ----------------------------------------------------------
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get Color  ------------------------------------------------------
+	double VectorColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("VectorColorName");
+	if (it != TaskObject.end())
+	{
+		auto VectorColorName = it.value().toString();
+		this->GetRBGColorByName(VectorColorName, VectorColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
+
+		it = TaskObject.find("VectorColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				VectorColorValue[0] = ColorValueList.at(0).toDouble();
+				VectorColorValue[1] = ColorValueList.at(1).toDouble();
+				VectorColorValue[2] = ColorValueList.at(2).toDouble();
+
+				IscolorOK = true;
+			}
+		}
+	}
+
+	// get VectorNum ------------------------------------------------------
+	int VectorNum = 0;
+	it = TaskObject.find("VectorNum");
+	if (it != TaskObject.end())
+	{
+		VectorNum = it.value().toString().toInt();
+	}
+	else
+	{
+		qWarning("VectorNum is unknown");
+		return false;
+	}
+
+	// get VectorDataType ------------------------------------------------------
+	QString VectorDataType = 0;
+	it = TaskObject.find("VectorDataType");
+	if (it != TaskObject.end())
+	{
+		VectorDataType = it.value().toString();
+	}
+	else
+	{
+		qWarning("VectorDataType is unknown");
+		return false;
+	}
+
+	// get VectorDataFileName  ------------------------------------------------------
+	QString VectorDataFileName;
+	it = TaskObject.find("VectorDataFileName");
+	if (it != TaskObject.end())
+	{
+		VectorDataFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("VectorDataFileName is unknown");
+		return false;
+	}
+
+	// load vector data ----------------------------------------------------------------
+	QString DataFilePathAndName = TaskInfo.GetFilePath() + VectorDataFileName;
+
+	vtkPolyData* VectorData = nullptr;
+
+	qDebug() << "Read Vector Data from " << DataFilePathAndName;
+
+	auto IsReadOK = ReadVectorData(DataFilePathAndName, VectorNum, VectorDataType, VectorData);
+
+	if (IsReadOK == false)
+	{
+		qDebug() << "Can not load Line Data";
+
+		return false;
+	}
+
+	qDebug() << "Vector Data is loaded";
+
+	// set name and color carried in FieldData of VectorData----------------------------
+	std::string tempNameStr = PropName.toStdString();
+
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
+
+	VectorData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
+
+	auto tempColor = vtkDoubleArray::New();
+
+	tempColor->SetNumberOfComponents(3);
+	tempColor->SetName("PropColor");
+	tempColor->InsertNextTuple(VectorColorValue);
+
+	VectorData->GetFieldData()->AddArray(tempColor);
+	tempColor->Delete();
+
+	//---------------------- Plot Vector ----------------------------------------//
+	auto PropHandle = Figure->PlotVector(VectorData);
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run Figure->PlotVector";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+	//---------------------- Write Result ----------------------------------------//
+
+	std::vector<NameValuePair> PairList;
+
+	NameValuePair Pair;
+
+	Pair.Name = "IsSuccess";
+	Pair.Value = "yes";
+	PairList.push_back(Pair);
+
+	Pair.Name = "FigureHandle";
+	Pair.Value = QString::number(FigureHandle);
+	PairList.push_back(Pair);
+
+	Pair.Name = "PropHandle";
+	Pair.Value = QString::number(PropHandle);
+	PairList.push_back(Pair);
+
+	SimpleJsonWriter::WritePair(PairList, TaskInfo.GetFilePath(), ResultFileName);
+	//-----------------------------Done---------------------------------------------------//
+
+	return true;
+}
+
+
+bool TaskHandler::run_vtkplottensor(const TaskInformation& TaskInfo)
+{
+	qDebug() << "run_vtkplottensor";
+
+	QFile TaskFile(TaskInfo.GetFilePathAndName());
+
+	if (!TaskFile.open(QIODevice::ReadOnly))
+	{
+		qWarning("Couldn't open task file.");
+		return false;
+	}
+	//----------------------------------------------------------//
+	QByteArray TaskContent = TaskFile.readAll();
+	QJsonDocument TaskDoc(QJsonDocument::fromJson(TaskContent));
+	QJsonObject TaskObject = TaskDoc.object();
+
+	//-------------------- Read some Information from Task.json ----------------------------------//
+
+	// get ResultFileName ----------------------------------------------------------
+	QString ResultFileName;
+	auto it = TaskObject.find("ResultFileName");
+	if (it != TaskObject.end())
+	{
+		ResultFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("ResultFileName is unknown");
+		return false;
+	}
+
+	//get FigureHandle ----------------------------------------------------------
+	quint64 FigureHandle = 0; // invalid handle
+	it = TaskObject.find("FigureHandle");
+	if (it != TaskObject.end())
+	{
+		FigureHandle = it.value().toString().toULongLong();
+	}
+	else
+	{
+		QString FailureInfo = "FigureHandle is unknown";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	//check FigureHandle ----------------------------------------------------------
+	auto Figure = this->GetQVtkFigure(FigureHandle);
+	if (Figure == nullptr)
+	{
+		QString FailureInfo = "FigureHandle is invalid";
+		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+		qWarning() << FailureInfo;
+		return false;
+	}
+
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get Color  ------------------------------------------------------
+	double TensorColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("TensorColorName");
+	if (it != TaskObject.end())
+	{
+		auto TensorColorName = it.value().toString();
+		this->GetRBGColorByName(TensorColorName, TensorColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
+
+		it = TaskObject.find("TensorColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				TensorColorValue[0] = ColorValueList.at(0).toDouble();
+				TensorColorValue[1] = ColorValueList.at(1).toDouble();
+				TensorColorValue[2] = ColorValueList.at(2).toDouble();
+
+				IscolorOK = true;
+			}
+		}
+	}
+
+	// get TensorNum ------------------------------------------------------
+	int TensorNum = 0;
+	it = TaskObject.find("TensorNum");
+	if (it != TaskObject.end())
+	{
+		TensorNum = it.value().toString().toInt();
+	}
+	else
+	{
+		qWarning("TensorNum is unknown");
+		return false;
+	}
+
+	// get TensorDataType ------------------------------------------------------
+	QString TensorDataType = 0;
+	it = TaskObject.find("TensorDataType");
+	if (it != TaskObject.end())
+	{
+		TensorDataType = it.value().toString();
+	}
+	else
+	{
+		qWarning("TensorDataType is unknown");
+		return false;
+	}
+
+	// get TensorDataFileName  ------------------------------------------------------
+	QString TensorDataFileName;
+	it = TaskObject.find("TensorDataFileName");
+	if (it != TaskObject.end())
+	{
+		TensorDataFileName = it.value().toString();
+	}
+	else
+	{
+		qWarning("TensorDataFileName is unknown");
+		return false;
+	}
+
+	// load tensor data ----------------------------------------------------------------
+	QString DataFilePathAndName = TaskInfo.GetFilePath() + TensorDataFileName;
+
+	vtkPolyData* TensorData = nullptr;
+
+	qDebug() << "Read Tensor Data from " << DataFilePathAndName;
+
+	auto IsReadOK = ReadTensorData(DataFilePathAndName, TensorNum, TensorDataType, TensorData);
+
+	if (IsReadOK == false)
+	{
+		qDebug() << "Can not load Tensor Data";
+
+		return false;
+	}
+
+	qDebug() << "Tensor Data is loaded";
+
+	// set name and color carried in FieldData of TensorData----------------------------
+	std::string tempNameStr = PropName.toStdString();
+
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
+
+	TensorData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
+
+	auto tempColor = vtkDoubleArray::New();
+
+	tempColor->SetNumberOfComponents(3);
+	tempColor->SetName("PropColor");
+	tempColor->InsertNextTuple(TensorColorValue);
+
+	TensorData->GetFieldData()->AddArray(tempColor);
+	tempColor->Delete();
+
+	//---------------------- Plot Tensor ----------------------------------------//
+	auto PropHandle = Figure->PlotTensor(TensorData);
+	if (PropHandle == 0)
+	{
+		QString FailureInfo = "Can not run Figure->PlotTensor";
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
@@ -775,6 +1230,44 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
+	}
+
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get MeshColor  ------------------------------------------------------
+	double MeshColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
+	{
+		auto MeshColorName = it.value().toString();
+		this->GetRBGColorByName(MeshColorName, MeshColorValue);
+	}
+	else
+	{
+		// Get Color if it is specified in the file
+		bool IscolorOK = false;
+
+		it = TaskObject.find("MeshColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				MeshColorValue[0] = ColorValueList.at(0).toDouble();
+				MeshColorValue[1] = ColorValueList.at(1).toDouble();
+				MeshColorValue[2] = ColorValueList.at(2).toDouble();
+
+				IscolorOK = true;
+			}
+		}
 	}
 
 	// get PointNum ------------------------------------------------------
@@ -862,41 +1355,21 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
-	// get MeshColor  ------------------------------------------------------
-	double MeshColorValue[3] = { 1, 1, 1 };//white
+	// set name and color carried in FieldData of MeshData----------------------------
+	std::string tempNameStr = PropName.toStdString();
 
-	it = TaskObject.find("MeshColorName");
-	if (it != TaskObject.end())
-	{
-		auto MeshColorName = it.value().toString();
-		TaskHandler::GetRBGColorByName(MeshColorName, MeshColorValue);
-	}
-	else
-	{
-		// Get Color if it is specified in the file
-		bool IscolorOK = false;
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
 
-		it = TaskObject.find("MeshColorValue");
-		if (it != TaskObject.end())
-		{
-			auto ColorValueList = it.value().toString().split(",");
-			auto tempsize = ColorValueList.size();
-			if (tempsize == 3)
-			{
-				MeshColorValue[0] = ColorValueList.at(0).toDouble();
-				MeshColorValue[1] = ColorValueList.at(1).toDouble();
-				MeshColorValue[2] = ColorValueList.at(2).toDouble();
+	MeshData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
 
-				IscolorOK = true;
-			}
-		}
-	}
-
-	// set color carried in FieldData of MeshData
 	auto tempColor = vtkDoubleArray::New();
 
 	tempColor->SetNumberOfComponents(3);
-	tempColor->SetName("Color");
+	tempColor->SetName("PropColor");
 	tempColor->InsertNextTuple(MeshColorValue);
 
 	MeshData->GetFieldData()->AddArray(tempColor);
@@ -989,6 +1462,43 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
+	// get MeshColor  if it is specified in the file -------------------------
+	double MeshColorValue[3] = { 1, 1, 1 };//white
+
+	it = TaskObject.find("MeshColorName");
+	if (it != TaskObject.end())
+	{
+		auto MeshColorName = it.value().toString();
+		this->GetRBGColorByName(MeshColorName, MeshColorValue);
+	}
+	else
+	{
+		bool IscolorOK = false;
+
+		it = TaskObject.find("MeshColorValue");
+		if (it != TaskObject.end())
+		{
+			auto ColorValueList = it.value().toString().split(",");
+			auto tempsize = ColorValueList.size();
+			if (tempsize == 3)
+			{
+				MeshColorValue[0] = ColorValueList.at(0).toDouble();
+				MeshColorValue[1] = ColorValueList.at(1).toDouble();
+				MeshColorValue[2] = ColorValueList.at(2).toDouble();
+
+				IscolorOK = true;
+			}
+		}
+	}
+
 	// get PointNum ------------------------------------------------------
 	int PointNum = 0;
 	it = TaskObject.find("PointNum");
@@ -1079,40 +1589,20 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 
 	qDebug() << "Read Mesh Data is loaded";
 
-	// get MeshColor  ------------------------------------------------------
-	double MeshColorValue[3] = { 1, 1, 1 };//white
+	// set name and color carried in FieldData of MeshData----------------------------
+	std::string tempNameStr = PropName.toStdString();
 
-	it = TaskObject.find("MeshColorName");
-	if (it != TaskObject.end())
-	{
-		auto MeshColorName = it.value().toString();
-		TaskHandler::GetRBGColorByName(MeshColorName, MeshColorValue);
-	}
-	else
-	{
-		// Get Color if it is specified in the file
-		bool IscolorOK = false;
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
 
-		it = TaskObject.find("MeshColorValue");
-		if (it != TaskObject.end())
-		{
-			auto ColorValueList = it.value().toString().split(",");
-			auto tempsize = ColorValueList.size();
-			if (tempsize == 3)
-			{
-				MeshColorValue[0] = ColorValueList.at(0).toDouble();
-				MeshColorValue[1] = ColorValueList.at(1).toDouble();
-				MeshColorValue[2] = ColorValueList.at(2).toDouble();
+	MeshData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
 
-				IscolorOK = true;
-			}
-		}
-	}
-
-	// set color carried in FieldData of MeshData
 	auto tempColor = vtkDoubleArray::New();
 	tempColor->SetNumberOfComponents(3);
-	tempColor->SetName("Color");
+	tempColor->SetName("PropColor");
 	tempColor->InsertNextTuple(MeshColorValue);
 
 	MeshData->GetFieldData()->AddArray(tempColor);
@@ -1205,6 +1695,14 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
+	}
+
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
 	}
 
 	//get image size ----------------------------------------------------------
@@ -1336,6 +1834,17 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 
 	ImageData->SetOrigin(Origin);
 
+	// set name carried in FieldData of ImageData----------------------------
+	std::string tempNameStr = PropName.toStdString();
+
+	auto tempName = vtkStringArray::New();
+	tempName->SetNumberOfComponents(3);
+	tempName->SetName("PropName");
+	tempName->InsertValue(0, tempNameStr);
+
+	ImageData->GetFieldData()->AddArray(tempName);
+	tempName->Delete();
+
 	//---------------------- Show Image ----------------------------------------//
 	auto PropHandle = Figure->ShowVolume(ImageData, VolumeProperty);
 	if (PropHandle == 0)
@@ -1439,6 +1948,14 @@ bool TaskHandler::run_vtkshowsliceofvolume(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+	// get PropName if it is in the file -----------------------------
+	QString PropName;
+	it = TaskObject.find("PropName");
+	if (it != TaskObject.end())
+	{
+		PropName = it.value().toString();
+	}
+
 	//get the SlicePlane --------------------------------
 	double Origin[3] = { 0.0, 0.0, 0.0 };
 	double Normal[3] = { 0.0, 0.0, 0.0 };
@@ -1506,7 +2023,7 @@ bool TaskHandler::run_vtkshowsliceofvolume(const TaskInformation& TaskInfo)
 
 	//---------------------- show slice of the volume ---------------------//
 
-	auto PropHandle = Figure->ShowSliceOfVolume(VolumeHandle, SlicePlane, ImageProperty);
+	auto PropHandle = Figure->ShowSliceOfVolume(VolumeHandle, SlicePlane, PropName, ImageProperty);
 
 	if (PropHandle == 0)
 	{
@@ -1787,6 +2304,10 @@ bool TaskHandler::ReadLineData(QString FilePathAndName, int LineNum, int TotalPo
 	}
 	//-----------------------------------
 	auto Point = vtkPoints::New();
+
+	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(DataType);
+
+	Point->SetDataType(VtkDataType);
 	Point->SetNumberOfPoints(TotalPointNum);
 
 	auto LineCell = vtkCellArray::New();
@@ -1845,6 +2366,155 @@ bool TaskHandler::ReadLineData(QString FilePathAndName, int LineNum, int TotalPo
 	LineCell->Delete();
 
 	return true;
+}
+
+
+bool TaskHandler::ReadVectorData(QString FilePathAndName, int VectorNum, QString DataType, vtkPolyData*& VectorData)
+{
+	//-------------------------
+	VectorData = nullptr;
+	//-------------------------
+
+	if (DataType != m_MatlabDataTypeList.Double)
+	{
+		qWarning() << "ReadVectorData only takes double DataType";
+		return false;
+	}
+
+	//----------------------------------------------------------------------------//
+
+	QFile DataFile(FilePathAndName);
+
+	if (!DataFile.open(QIODevice::ReadOnly))
+	{
+		qWarning() << "Couldn't open line data file:" << FilePathAndName;
+		return false;
+	}
+	//-----------------------------------
+	auto Position = vtkPoints::New();
+
+	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(DataType);
+
+	Position->SetDataType(VtkDataType);
+	Position->SetNumberOfPoints(VectorNum);
+
+	auto Vector = vtkDoubleArray::New();
+	Vector->SetNumberOfComponents(3);
+	Vector->SetNumberOfTuples(VectorNum);
+
+	//-----------------------------------
+	double tempVector[3] = { 0, 0, 0 };
+	double tempPos[3] = { 0, 0, 0 };
+
+	for (int i = 0; i < VectorNum; ++i)
+	{
+		auto BypesOfVector = DataFile.read((char *)&tempVector, 24);
+		if (BypesOfVector != 24)
+		{
+			Position->Delete();
+			Vector->Delete();
+			return false;
+		}
+
+		Vector->InsertTuple(i, tempVector);
+		
+		auto BypesOfPosition = DataFile.read((char *)&tempPos, 24);
+		if (BypesOfPosition != 24)
+		{
+			Position->Delete();
+			Vector->Delete();
+			return false;
+		}
+
+		Position->InsertPoint(i, tempPos);		
+	}
+
+    VectorData = vtkPolyData::New();
+
+	VectorData->SetPoints(Position);
+	Position->Delete();
+
+	VectorData->GetPointData()->SetVectors(Vector);
+	Vector->Delete();
+
+	return true;
+}
+
+
+bool TaskHandler::ReadTensorData(QString FilePathAndName, int TensorNum, QString DataType, vtkPolyData*& TensorData)
+{
+	//-------------------------
+	TensorData = nullptr;
+	//-------------------------
+
+	if (DataType != m_MatlabDataTypeList.Double)
+	{
+		qWarning() << "ReadTensorData only takes double DataType";
+		return false;
+	}
+
+	//----------------------------------------------------------------------------//
+
+	QFile DataFile(FilePathAndName);
+
+	if (!DataFile.open(QIODevice::ReadOnly))
+	{
+		qWarning() << "Couldn't open line data file:" << FilePathAndName;
+		return false;
+	}
+	//-----------------------------------
+	auto Position = vtkPoints::New();
+
+	auto VtkDataType = this->MapMatlabDataTypeToVtkDataType(DataType);
+
+	Position->SetDataType(VtkDataType);
+
+	Position->SetNumberOfPoints(TensorNum);
+
+	auto Tensor = vtkDoubleArray::New();
+	Tensor->SetNumberOfComponents(9);
+	Tensor->SetNumberOfTuples(TensorNum);
+
+	//-----------------------------------
+	double tempTensor[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	double tempPos[3] = { 0, 0, 0 };
+
+	long long BypesOfTensor = 0;
+	long long BypesOfPosition = 0;
+
+	for (int i = 0; i < TensorNum; ++i)
+	{
+		BypesOfTensor = DataFile.read((char *)&tempTensor, 72);
+		if (BypesOfTensor != 72)
+		{
+			Position->Delete();
+			Tensor->Delete();
+			return false;
+		}
+
+		Tensor->InsertTuple(i, tempTensor);
+
+		BypesOfPosition = DataFile.read((char *)&tempPos, 24);
+		if (BypesOfPosition != 24)
+		{
+			Position->Delete();
+			Tensor->Delete();
+			return false;
+		}
+
+		Position->InsertPoint(i, tempPos);
+	}
+
+	TensorData = vtkPolyData::New();
+
+	TensorData->SetPoints(Position);
+	Position->Delete();
+
+	TensorData->GetPointData()->SetTensors(Tensor);
+	Tensor->Delete();
+
+	return true;
+
 }
 
 

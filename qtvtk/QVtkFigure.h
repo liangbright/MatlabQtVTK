@@ -101,6 +101,12 @@ public:
 
 	//---------------------------------------------------------------------
 
+	QString ExtractPropName(vtkDataObject* DataObject);
+
+	bool ExtractPropColor(vtkDataObject* DataObject, double Color[3]);
+
+	//---------------------------------------------------------------------
+
 	quint64 PlotPoint(vtkPolyData* PointData);
 
 	vtkProp* CreatePointProp(vtkPolyData* PointData);
@@ -108,7 +114,17 @@ public:
 
 	quint64 PlotLine(vtkPolyData* LineData);
 
-	vtkProp* CreateLineProp(vtkPolyData*LineData);
+	vtkProp* CreateLineProp(vtkPolyData* LineData);
+	//---------------------------------------------------------------------
+
+	quint64 PlotVector(vtkPolyData* VectorData);
+
+	vtkProp* CreateVectorProp(vtkPolyData* VectorData); // test return vtkProp&
+	//---------------------------------------------------------------------
+
+	quint64 PlotTensor(vtkPolyData* TensorData);
+
+	vtkProp* CreateTensorProp(vtkPolyData* TensorData); // test return vtkProp&
 	//---------------------------------------------------------------------
 
 	quint64 QVtkFigure::ShowPloyMesh(vtkPolyData* MeshData);
@@ -125,7 +141,8 @@ public:
 	QString GetDefaultRenderMethod();
 	//----------------------------------------------------------------------
 
-	quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty = nullptr);
+	quint64 QVtkFigure::ShowSliceOfVolume(quint64 VolumePropHandle, vtkPlane* SlicePlane, QString SliceName, 
+		                                  vtkImageProperty* ImageProperty = nullptr);
 
 	vtkProp* QVtkFigure::CreateSliceOfVolumeProp(vtkImageData* VolumeData, vtkPlane* SlicePlane, vtkImageProperty* ImageProperty);
 

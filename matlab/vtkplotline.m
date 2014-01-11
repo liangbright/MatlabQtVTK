@@ -1,10 +1,14 @@
-function Result = vtkplotline(FigureHandle, Line, Color)
+function Result = vtkplotline(FigureHandle, PropName, Line, Color)
 
 Result=[];
 %%
 Command='vtkplotline';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
+if isempty(PropName)
+    PropName='';
+end
+
 if iscell(Line)
     LineNum=num2str(int32(length(Line)), '%d');
     
@@ -44,6 +48,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'PropName', PropName}, ...
            {'LineNum', LineNum}, ...
            {'TotalPointNum', TotalPointNum}, ...
            {'LineColorValue', LineColorValue}, ...      
@@ -51,7 +56,7 @@ Task.Text={{'Command', Command}, ...
            {'PointDataType', PointDataType},...
            {'ResultFileName', ResultFileName}};
        
-Task.Data={{PointDataFileName, FileType, PointDataType, LineData}};
+Task.Data={{PointDataFileName, FileType, PointDataType, Line}};
 
 %%
 Client = MatlabClientClass;

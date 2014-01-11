@@ -1,4 +1,4 @@
-function Result = vtkshowpolymesh(FigureHandle, Mesh, MeshColorName)
+function Result = vtkshowpolymesh(FigureHandle, PropName, Mesh, MeshColorName)
 % MeshColorName:
 % white
 % black
@@ -26,6 +26,10 @@ end
 Command='vtkshowpolymesh';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
+if isempty(PropName)
+    PropName='';
+end
+
 [~, PointNum]=size(MeshFile.Point);
 PointNum=num2str(int64(PointNum), '%d');
 
@@ -53,6 +57,7 @@ Task.Taskhandle=Taskhandle;
 
 Task.Text={{'Command', Command}, ...
            {'FigureHandle', FigureHandle}, ...
+           {'PropName', PropName}, ...
            {'MeshColorName', MeshColorName}, ...
            {'PointNum', PointNum}, ...          
            {'PointDataFileName', PointDataFileName}, ...

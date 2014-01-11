@@ -149,7 +149,7 @@ public slots:
 
 private:	
 
-	void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle);
+	void CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle);
 
 	void CreateMatlabCommandTranslator();
 
@@ -164,6 +164,10 @@ private:
 
 	bool ReadLineData(QString FilePathAndName, int LineNum, int TotalPointNum, QString DataType, vtkPolyData*& LineData);
 	
+	bool ReadVectorData(QString FilePathAndName, int VectorNum, QString VectorDataType, vtkPolyData*& VectorData);
+
+	bool ReadTensorData(QString FilePathAndName, int TensorNum, QString TensorDataType, vtkPolyData*& TensorData);
+
 	bool ReadPolyMeshData_From_INP(QString FilePathAndName, vtkPolyData*& MeshData);
 
 	bool ReadPolyMeshData(QString FilePathAndName_PointData, int PointNum, QString PointDataType,
@@ -194,6 +198,12 @@ private:
 	//----------------------------------------------------------
 
 	bool run_vtkplotline(const TaskInformation& TaskInfo);
+	//----------------------------------------------------------
+
+	bool run_vtkplotvector(const TaskInformation& TaskInfo);
+	//----------------------------------------------------------
+
+	bool run_vtkplottensor(const TaskInformation& TaskInfo);
 	//----------------------------------------------------------
 
 	bool run_vtkshowpolymesh(const TaskInformation& TaskInfo);
