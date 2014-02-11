@@ -213,8 +213,8 @@ end
 function IsSucess=WriteImageDataTobinary(FullFileName, DataType, Data)
 % output is binary file (*.image)
 
-if ~ismatrix(Data)
-    disp('Input Data to WriteImageData_binary must be matrix')
+if ~isnumeric(Data)
+    disp('Input Data to WriteImageDataTobinary must be Array')
 end
 
 [Ly, Lx, Lz]=size(Data);

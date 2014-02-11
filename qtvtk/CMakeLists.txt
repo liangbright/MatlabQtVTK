@@ -8,6 +8,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "C:/Program Files\ \(x86\)/Windows\ K
 
 PROJECT(MatlabQtVTK_GUI)
 
+set(VTK_DIR C:/Programs/VTK/VTK_6.1_VC2013_Build)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
  
@@ -29,9 +30,9 @@ add_executable(MatlabQtVTK_GUI ${CPP_FILES} ${UISrcs} ${QT_WRAP})
 
 qt5_use_modules(MatlabQtVTK_GUI Core Gui Network)
 
-set(VTKLIB_DIR "C:/Programs/VTK/VTK_6_VC_Build/lib")
+#set(VTKLIB_DIR "C:/Programs/VTK/VTK_6.1_VC_Build/lib")
 
-message(STATUS ${VTKLIB_DIR}/${VTK_LIBRARIES})
+#message(STATUS ${VTKLIB_DIR}/${VTK_LIBRARIES})
 
 #target_link_libraries(MatlabQtVTK_GUI ${VTKLIB_DIR}/${VTK_LIBRARIES}) 
 

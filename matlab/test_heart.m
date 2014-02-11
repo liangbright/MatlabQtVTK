@@ -29,8 +29,8 @@ FilePath='E:\HeartData\P1943091-im_6-phase10-close-leaflet\im_6\phase0\';
 Volume = ReadDIOMVolume(FilePath);
 %%
 VolumeFigureHandle = vtkfigure();
-%
-IntensityDisplayRange=[0, 2000];
+
+IntensityDisplayRange=[1000, 2000];
 Result7 = vtkshowvolume(VolumeFigureHandle, 'Volume1', Volume, IntensityDisplayRange);
 VolumeHandle=Result7.PropHandle;
 %%

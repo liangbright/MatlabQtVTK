@@ -197,7 +197,8 @@ bool LocalTaskServer::InitializeTaskFolders()
 	QDir DiskDir("M:");
 	if (DiskDir.exists() == false)
 	{
-		qWarning("Disk M:/ is not there");
+        std::cout << '\a';
+		qWarning("~~~~~~~~~~~~~~~~~ Disk M:/ is not there ~~~~~~~~~~~~~~~~~~~~~~");
 		return false;
 	}
 
