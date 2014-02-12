@@ -872,7 +872,7 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRang
 	for (double level = DataRange[0]; level < DataRange[1]; level += step)
 	{
         opacity = min_value + (1.0 - min_value)*(level - DataRange[0]) / (DataRange[1] + min_value);
-		opacity = opacity*0.5;
+		//opacity = opacity*0.5;
 		OpacityTransferFunction->AddPoint(level, opacity);
 	}
 	//constant opacities over whole data range

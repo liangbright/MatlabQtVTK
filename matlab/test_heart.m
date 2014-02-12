@@ -38,6 +38,7 @@ VolumeHandle=Result7.PropHandle;
 SlicePlane.Normal=[0, 0, 1];  % (x,y,z)
 SlicePlane.Origin=[0, 0, 9]; % (x,y,z)
 Result8 = vtkshowsliceofvolume(VolumeFigureHandle,VolumeHandle, 'Slice_z9', SlicePlane, IntensityDisplayRange);
+%
 %%
 tempResult=vtkshowaxes(VolumeFigureHandle);
 %%
