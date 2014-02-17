@@ -219,6 +219,8 @@ end
 
 [Ly, Lx, Lz]=size(Data);
 
+%[Lx, Ly, Lz]=size(Data);
+
 IsSucess=0;
 
 fid = fopen(FullFileName, 'w');

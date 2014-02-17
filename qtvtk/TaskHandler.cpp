@@ -1759,6 +1759,35 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 		return false;
 	}
 
+    //get image spacing ----------------------------------------------------------
+    double Spacing[3] = { 1.0, 1.0, 1.0 };
+    bool IsSpacingOK = false;
+
+    it = TaskObject.find("ImageSpacing");
+    if (it != TaskObject.end())
+    {
+        auto SpacingValueList = it.value().toString().split(",");
+        auto tempsize = SpacingValueList.size();
+        if (tempsize == 3)
+        {
+            Spacing[0] = SpacingValueList.at(0).toDouble();
+            Spacing[1] = SpacingValueList.at(1).toDouble();
+            Spacing[2] = SpacingValueList.at(2).toDouble();
+
+            IsSpacingOK = true;
+        }
+    }
+
+    if (IsSpacingOK == false)
+    {
+        QString WarningInfo = "ImageSpacing is invalid";
+        qWarning() << WarningInfo;
+
+        Spacing[0] = 1.0;
+        Spacing[1] = 1.0;
+        Spacing[2] = 1.0;
+    }
+
 	// get MatlabDataType ----------------------------------------------------------
 	QString DataType;
 	it = TaskObject.find("DataType");
@@ -1824,7 +1853,7 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 	auto IsReadOK = ReadImageData(DataFilePathAndName, ImageSize, DataType, ImageData);
 	if (ImageData == nullptr)
 	{
-		QString FailureInfo = "ImageData is not loaded";
+		QString FailureInfo = "Image Data is not loaded";
 		TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
 		qWarning() << FailureInfo;
 		return false;
@@ -1834,7 +1863,9 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 
 	ImageData->SetOrigin(Origin);
 
-	// set name carried in FieldData of ImageData----------------------------
+    ImageData->SetSpacing(Spacing);
+
+	// set name carried in FieldData of vtkImageData----------------------------
 	std::string tempNameStr = PropName.toStdString();
 
 	auto tempName = vtkStringArray::New();

@@ -1,6 +1,7 @@
-function ImageData = ReadDIOMVolume(FilePath)
+function [ImageData, ImageInfo] = ReadDIOMVolume(FilePath)
 
 ImageData=[];
+ImageInfo=[];
 %------------------------------------------------------------------    
 AllFileName=dir(fullfile([FilePath '*.dcm']));
 Num=length(AllFileName);
@@ -22,6 +23,9 @@ if iscell(FileName)
     ImageNum=length(FileName);
     I=dicomread([FilePath FileName{1}]);
     [Ly, Lx]=size(I);
+    
+    ImageInfo = dicominfo([FilePath FileName{1}]);
+    
     ImageData=zeros(Ly,Lx,ImageNum);
     ImageData(:,:,1)=I;
     for k=2:ImageNum        

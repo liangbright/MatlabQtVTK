@@ -1,4 +1,4 @@
-function Result = vtkshowvolume(FigureHandle, PropName, Volume, IntensityDisplayRange, Origin, Spacing)
+function Result = vtkshowvolume(FigureHandle, PropName, Volume, Origin, Spacing, IntensityDisplayRange)
 
 Result=[];
 %%
@@ -6,16 +6,16 @@ Command='vtkshowvolume';
 Taskhandle=[Command num2str(uint64(100000*rand))];
 %%
 if nargin == 3
-    IntensityDisplayRange=[];
     Origin=[];
     Spacing=[];
+    IntensityDisplayRange=[];
 end
 if nargin == 4
-    Origin=[];
     Spacing=[];
+    IntensityDisplayRange=[];
 end
 if nargin == 5
-    Spacing=[];
+    IntensityDisplayRange=[];
 end
 %%
 if isempty(PropName)
