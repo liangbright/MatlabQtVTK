@@ -117,7 +117,7 @@ void LocalTaskServer::test()
 
 	double DataRange[2] = { 1, 10 };
 
-	auto VolumeProperty = Figure->CreateDefaultVolumeProperty(DataRange);
+	auto VolumeProperty = Figure->CreateDefaultVolumeProperty_Color(DataRange);
 
 	auto ImageProp = Figure->ShowVolume(Image, VolumeProperty);
 

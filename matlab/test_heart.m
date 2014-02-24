@@ -36,7 +36,7 @@ IntensityDisplayRange=[1200, 2000];
 
 Result7 = vtkshowvolume(VolumeFigureHandle, 'Volume1', Volume(:,:,end:-1:1), Origin, Spacing, IntensityDisplayRange);
 VolumeHandle=Result7.PropHandle;
-
+%%
 vtkshowaxes(VolumeFigureHandle);
 vtkshowpolymesh(VolumeFigureHandle, 'phase0-open', PolyMesh{1}, 'green');
 vtkshowpolymesh(VolumeFigureHandle, 'phase0-open-leaflet', PolyMesh{2}, 'yellow');

@@ -1,4 +1,4 @@
-function Result = vtkshowvolume(FigureHandle, PropName, Volume, Origin, Spacing, IntensityDisplayRange)
+function Result = vtkshowvolume(FigureHandle, PropName, Volume, Origin, Spacing, IntensityDisplayRange, ColorMapType)
 
 Result=[];
 %%
@@ -9,13 +9,19 @@ if nargin == 3
     Origin=[];
     Spacing=[];
     IntensityDisplayRange=[];
+    ColorMapType=[];
 end
 if nargin == 4
     Spacing=[];
     IntensityDisplayRange=[];
+    ColorMapType=[];
 end
 if nargin == 5
     IntensityDisplayRange=[];
+    ColorMapType=[];
+end
+if nargin == 6
+    ColorMapType=[];
 end
 %%
 if isempty(PropName)
@@ -26,6 +32,10 @@ if isempty(IntensityDisplayRange)
     DisplayRange=[num2str(min(Volume(:)), '%10.10f') ',' num2str(max(Volume(:)), '%10.10f')];
 else
     DisplayRange=[num2str(IntensityDisplayRange(1), '%10.10f') ',' num2str(IntensityDisplayRange(2), '%10.10f')];   
+end
+
+if isempty(ColorMapType)
+    ColorMapType='gray';
 end
 
 % matlab Volume(y+1,x+1,z+1) is the voxel at (x,y,z) 
@@ -64,6 +74,7 @@ Task.Text={{'Command', Command}, ...
            {'ImageDataFileName', ImageDataFileName}, ...
            {'DataType', DataType},...
            {'IntensityDisplayRange', DisplayRange},...
+           {'ColorMapType', ColorMapType}, ...
            {'ResultFileName', ResultFileName}};
 
 Task.Data={{ImageDataFileName, FileType, DataType, Volume}};

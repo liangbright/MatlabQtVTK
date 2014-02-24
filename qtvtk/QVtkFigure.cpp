@@ -43,8 +43,8 @@
 #include <vtkCamera.h>
 #include <vtkRenderer.h> 
 #include <vtkRenderWindow.h>
-//#include <vtkDelaunay3D.h>
-//#include <vtkGeometryFilter.h>
+#include <vtkDelaunay3D.h>
+#include <vtkGeometryFilter.h>
 #include <vtkImageChangeInformation.h>
 #include <vtkImageWriter.h>
 #include <vtkPNGWriter.h>
@@ -803,9 +803,12 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 	else
 	{
 		double DataRange[2] = { 0, 0 };
-		VolumeData->GetScalarRange(DataRange);
 
-		auto tempVolumeProperty = this->CreateDefaultVolumeProperty(DataRange);
+        VolumeData->GetScalarRange(DataRange);
+
+        //auto tempVolumeProperty = this->CreateDefaultVolumeProperty_Color(DataRange);
+
+		auto tempVolumeProperty = this->CreateDefaultVolumeProperty_Gray(DataRange);
 
 		VolumeProp->SetProperty(tempVolumeProperty);
 		tempVolumeProperty->Delete();
@@ -823,18 +826,20 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 
 }
 
+
 QString QVtkFigure::GetDefaultRenderMethod()
 {
 	return QString("RayCast");
 }
 
-vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRange[2])
+
+vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty_Color(const double DataRange[2])
 {
 	auto VolumeProperty = vtkVolumeProperty::New();
 
 	if (DataRange[1] < DataRange[0])
 	{
-		qWarning() << "DataRange[1] < DataRange[0] @ CreateDefaultVolumeProperty";
+		qWarning() << "DataRange[1] < DataRange[0] @ CreateDefaultVolumeProperty_Color";
 
 		return VolumeProperty; // keep it simple, nullptr will lead to crash
 	}
@@ -865,14 +870,13 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRang
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*0.875), 1.0, 0.5, 0.0);
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*1.000), 1.0, 0.0, 0.0);
 
-	// create default opacity lut, 
-	double opacity = 0;
-	double step = (DataRange[1] - DataRange[0]) / 100;
-    double min_value = 0.001;
+    double max_opacity = 1.0;
+    double min_opacity = 0.001;
+    double step = (DataRange[1] - DataRange[0]) / 100;
 	for (double level = DataRange[0]; level < DataRange[1]; level += step)
 	{
-        opacity = min_value + (1.0 - min_value)*(level - DataRange[0]) / (DataRange[1] + min_value);
-		//opacity = opacity*0.5;
+        double opacity = min_opacity + (max_opacity - min_opacity)*(level - DataRange[0]) / (DataRange[1] + min_opacity);
+
 		OpacityTransferFunction->AddPoint(level, opacity);
 	}
 	//constant opacities over whole data range
@@ -885,6 +889,47 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty(const double DataRang
 	VolumeProperty->SetScalarOpacity(OpacityTransferFunction);
 
 	return VolumeProperty;
+}
+
+
+vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty_Gray(const double DataRange[2])
+{
+    auto VolumeProperty = vtkVolumeProperty::New();
+
+    if (DataRange[1] < DataRange[0])
+    {
+        qWarning() << "DataRange[1] < DataRange[0] @ CreateDefaultVolumeProperty_Gray";
+
+        return VolumeProperty; // keep it simple, nullptr will lead to crash
+    }
+
+    auto ColorTransferFunction = vtkSmartPointer<vtkColorTransferFunction>::New();
+
+    ColorTransferFunction->AddRGBPoint(DataRange[0], 0.0, 0.0, 0.0);
+    ColorTransferFunction->AddRGBPoint(DataRange[1], 1.0, 1.0, 1.0);
+
+
+    auto OpacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
+
+    double max_opacity = 1.0;
+    double min_opacity = 0.001;
+    double step = (DataRange[1] - DataRange[0]) / 100;
+    for (double level = DataRange[0]; level < DataRange[1]; level += step)
+    {
+        double opacity = min_opacity + (max_opacity - min_opacity)*(level - DataRange[0]) / (DataRange[1] + min_opacity);
+
+        OpacityTransferFunction->AddPoint(level, opacity);
+    }
+    //constant opacities over whole data range
+    //double opacity = 0.05;
+    //OpacityTransferFunction->AddPoint(DataRange[0], opacity);
+    //OpacityTransferFunction->AddPoint(DataRange[1], opacity);
+
+    VolumeProperty->SetColor(ColorTransferFunction);
+
+    VolumeProperty->SetScalarOpacity(OpacityTransferFunction);
+
+    return VolumeProperty;
 }
 
 

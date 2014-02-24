@@ -1834,17 +1834,37 @@ bool TaskHandler::run_vtkshowvolume(const TaskInformation& TaskInfo)
 			IntensityDisplayRange[0] = SizeValueList.at(0).toDouble();
 			IntensityDisplayRange[1] = SizeValueList.at(1).toDouble();
 
-			IsRangeOK = true;
+            if (IntensityDisplayRange[1] > IntensityDisplayRange[0])
+            {
+                IsRangeOK = true;
+            }
 		}
 	}
+
+    if (IsRangeOK == false)
+    {
+        QString FailureInfo = "IntensityDisplayRange is unknown or invalid";
+        TaskHandler::WriteTaskFailureInfo(TaskInfo, ResultFileName, FailureInfo);
+        qWarning() << FailureInfo;
+        return false;
+    }
 
 	//set VolumeProperty
 	vtkVolumeProperty* VolumeProperty = nullptr;
 
-	if (IsRangeOK == true)
-	{
-		VolumeProperty = Figure->CreateDefaultVolumeProperty(IntensityDisplayRange);
-	}
+    it = TaskObject.find("ColorMapType");
+    if (it != TaskObject.end())
+    {
+        auto ColorMapType = it.value().toString();
+        if (ColorMapType == "color")
+        {
+            VolumeProperty = Figure->CreateDefaultVolumeProperty_Color(IntensityDisplayRange);
+        }
+        else
+        {
+            VolumeProperty = Figure->CreateDefaultVolumeProperty_Gray(IntensityDisplayRange);
+        }
+    }
 
 	//--------------------- Get the data ---------------------------------------//
 	qDebug() << "Read Image Data from" << DataFilePathAndName;

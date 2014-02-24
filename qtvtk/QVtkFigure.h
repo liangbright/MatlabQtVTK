@@ -136,7 +136,9 @@ public:
 
 	vtkProp* CreateVolumeProp(vtkImageData* VolumeData, vtkVolumeProperty* VolumeProperty);
 
-	vtkVolumeProperty* CreateDefaultVolumeProperty(const double DataRange[2]);
+	vtkVolumeProperty* CreateDefaultVolumeProperty_Color(const double DataRange[2]);
+
+    vtkVolumeProperty* CreateDefaultVolumeProperty_Gray(const double DataRange[2]);
 
 	QString GetDefaultRenderMethod();
 	//----------------------------------------------------------------------
