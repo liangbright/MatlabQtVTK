@@ -871,11 +871,11 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty_Color(const double Da
 	ColorTransferFunction->AddRGBPoint(dataMin + (dataDiff*1.000), 1.0, 0.0, 0.0);
 
     double max_opacity = 1.0;
-    double min_opacity = 0.001;
+
     double step = (DataRange[1] - DataRange[0]) / 100;
 	for (double level = DataRange[0]; level < DataRange[1]; level += step)
 	{
-        double opacity = min_opacity + (max_opacity - min_opacity)*(level - DataRange[0]) / (DataRange[1] + min_opacity);
+        double opacity = max_opacity*(level - DataRange[0]) / dataDiff;
 
 		OpacityTransferFunction->AddPoint(level, opacity);
 	}
@@ -911,17 +911,20 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty_Gray(const double Dat
 
     auto OpacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
 
+    double dataDiff = (DataRange[1] - DataRange[0]);
+
     double max_opacity = 1.0;
-    double min_opacity = 0.001;
-    double step = (DataRange[1] - DataRange[0]) / 100;
+
+    double step = dataDiff / 100;
     for (double level = DataRange[0]; level < DataRange[1]; level += step)
     {
-        double opacity = min_opacity + (max_opacity - min_opacity)*(level - DataRange[0]) / (DataRange[1] + min_opacity);
+        double opacity = max_opacity*(level - DataRange[0]) / dataDiff;
 
         OpacityTransferFunction->AddPoint(level, opacity);
     }
+    
     //constant opacities over whole data range
-    //double opacity = 0.05;
+    //double opacity = 1;
     //OpacityTransferFunction->AddPoint(DataRange[0], opacity);
     //OpacityTransferFunction->AddPoint(DataRange[1], opacity);
 

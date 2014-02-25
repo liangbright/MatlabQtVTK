@@ -31,7 +31,7 @@ for n=1:FileNum
             IsSucess=WriteMatrixDataTobinary(FullFileName, DataType, Data);
 
         case 'image'
-            IsSucess=WriteImageDataTobinary(FullFileName, DataType, Data);
+            IsSucess=WriteImageDataToRawDataFile(FullFileName, DataType, Data);
             
         otherwise
             disp('unknown FileType')
@@ -204,40 +204,6 @@ for k=1:MatrixNum
     fwrite(fid, temp, DataType);
 end
 
-fclose(fid);
-    
-IsSucess=1;
-
-end
-
-function IsSucess=WriteImageDataTobinary(FullFileName, DataType, Data)
-% output is binary file (*.image)
-
-if ~isnumeric(Data)
-    disp('Input Data to WriteImageDataTobinary must be Array')
-end
-
-[Ly, Lx, Lz]=size(Data);
-
-%[Lx, Ly, Lz]=size(Data);
-
-IsSucess=0;
-
-fid = fopen(FullFileName, 'w');
-if fid == -1
-    disp('can not open feature file')
-    return
-end
-
-%dimention (Lx, Ly, Lz) is in the *.json file
-
-% Data(y,x,z);
-% for z-> for y -> for x
-for z=1:Lz;
-    temp=Data(:,:,z);
-    temp=temp';
-    fwrite(fid, temp(:), DataType);    
-end
 fclose(fid);
     
 IsSucess=1;
