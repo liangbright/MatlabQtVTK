@@ -77,7 +77,14 @@ while ischar(str)
     
     if Flag_cell == 0 
        
-        if strcmp(str(1), ' ')
+        if isempty(str)
+            while 1
+                str = fgetl(fid);
+                if ~isempty(str)
+                    break
+                end
+            end
+        elseif strcmp(str(1), ' ')
             while 1
                 str = fgetl(fid);
                 if ~strcmp(str(1), ' ')
@@ -93,7 +100,9 @@ while ischar(str)
         end
     
     else
-        if strcmp(str(1), 'C')
+        if isempty(str)
+            break            
+        elseif strcmp(str(1), 'C')
              break            
         end 
     end
