@@ -7,7 +7,7 @@ FullFileName{5}='E:\HeartData\P1943091-im_6-phase10-close-leaflet\P1943091-im_6-
 FullFileName{6}='E:\HeartData\P1943091-im_6-phase10-close-leaflet\P1943091-im_6-phase10-close-leaflet.inp';
 %% load mesh data
 PolyMesh=cell(1,6);
-for k=1:6
+for k=1:2
 tic
 PolyMesh{k} = ReadPolyMeshDataFile_inp(FullFileName{k});
 toc
@@ -36,7 +36,7 @@ IntensityDisplayRange=[1200, 2000];
 
 Result7 = vtkshowvolume(VolumeFigureHandle, 'Volume1', Volume(:,:,end:-1:1), Origin, Spacing, IntensityDisplayRange);
 VolumeHandle=Result7.PropHandle;
-%%
+%% show mesh in image  (-open)
 vtkshowaxes(VolumeFigureHandle);
 vtkshowpolymesh(VolumeFigureHandle, 'phase0-open', PolyMesh{1}, 'green');
 vtkshowpolymesh(VolumeFigureHandle, 'phase0-open-leaflet', PolyMesh{2}, 'yellow');

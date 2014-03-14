@@ -6,7 +6,8 @@
 #include <qstring.h>
 
 class QVtkFigure;
-class PropInfomration;
+
+struct PropInfomration;
 
 class QVtkFigureMainWindow : public QMainWindow
 {	

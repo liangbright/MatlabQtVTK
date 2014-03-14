@@ -19,19 +19,16 @@ class vtkVolumeProperty;
 class vtkImageProperty;
 class vtkPlane;
 
-class DataInfomration
+struct DataInfomration
 {
-public:
 	QString Name;
 
 	double Range[2];
 
 };
 
-class PropInfomration
+struct PropInfomration
 {
-public:
-
 	quint64 Handle = 0; //handle of the Prop
 
 	QString Name;
@@ -83,8 +80,6 @@ public:
 	}
 
 	void SetTitle(QString Title);
-
-	void CreateMenus();
 
 	vtkRenderWindow* GetRenderWindow();
 
@@ -152,6 +147,7 @@ public:
 	//----------------------------------------------------------------------
 
 	bool ResliceVolume(quint64 VolumePropHandle);
+
 signals:
 	void UserCloseFigure();
 

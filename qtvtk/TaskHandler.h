@@ -21,10 +21,12 @@ class vtkVolumeProperty;
 class TaskInformation
 {
 public:
-	// M:/PendingTasks/abcd1234567890/Task.json
-	QString FolderPath;   // M:/PendingTasks/
+	
+    //example: M:/PendingTasks/vtkfigure1234567890/Task.json
 
-	QString FolderName;   // abcd1234567890  is the handle of the task
+    QString FolderPath;   // M:/PendingTasks/
+
+	QString FolderName;   // vtkfigure1234567890  is the handle of the task
 
 	QString Command;
 
@@ -57,9 +59,10 @@ public:
 	}
 };
 
-class MatlabDataTypeList
+
+struct MatlabDataTypeList
 {
-public:
+
 	QString Double = "double";
 	QString Single = "single";
 
@@ -75,6 +78,7 @@ public:
 
 	QString Unknown = "unknown";
 };
+
 
 typedef enum
 {
@@ -99,12 +103,12 @@ typedef enum
 } VtkDataTypeEnum;
 
 
-class RGBColor
+struct RGBColor
 {
-public:
+
 	QString Name;
 	double Value[3];
-public:
+
 	RGBColor()
 	{
 		Name = "white";
@@ -113,6 +117,7 @@ public:
 		Value[2] = 1;
 	}
 };
+
 
 class TaskHandler : public QObject
 {
@@ -139,7 +144,7 @@ public:
 	TaskHandler();
 	~TaskHandler();
 
-	bool RunTask(TaskInformation& TaskInfo);
+	bool RunTask(TaskInformation TaskInfo);
 
 	void WriteExampleTaskFile(const TaskInformation& TaskInfo);
 	void ReadExampleTaskFile(const TaskInformation& TaskInfo);
@@ -149,7 +154,7 @@ public slots:
 
 private:	
 
-	void CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle);
+    quint64 CreateQVtkFigure();
 
 	void CreateMatlabCommandTranslator();
 

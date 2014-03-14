@@ -93,31 +93,25 @@ void TaskHandler::CreateMatlabCommandTranslator()
 }
 
 
-void TaskHandler::CreateQVtkFigure(QVtkFigure** Figure, quint64*  FigureHandle)
+quint64 TaskHandler::CreateQVtkFigure()
 {
-	*Figure = nullptr;
-	*FigureHandle = 0;
-
-	auto Handle = this->GenerateFigureHandle();
+    auto FigureHandle = this->GenerateFigureHandle();
 
 	auto Figure_upt = std::unique_ptr<QVtkFigure>(new QVtkFigure);
 
-	Figure_upt->SetHandle(Handle);
+    Figure_upt->SetHandle(FigureHandle);
 
 	connect(Figure_upt.get(), &QVtkFigure::UserCloseFigure, this, &TaskHandler::CloseQVtkFigure);
 
-	QString Title = "FigureHandle = " + QString::number(Handle);
+    QString Title = "FigureHandle = " + QString::number(FigureHandle);
 
 	Figure_upt->SetTitle(Title);
 
 	Figure_upt->Show();
 
-	*FigureHandle = Handle;
+    m_FigureRecord[FigureHandle] = std::move(Figure_upt);
 
-	*Figure=Figure_upt.get();
-
-	m_FigureRecord[Handle] = std::move(Figure_upt);
-
+    return FigureHandle;
 }
 
 
@@ -244,10 +238,10 @@ bool TaskHandler::run_vtkfigure(const TaskInformation& TaskInfo)
 	}
 
 	// new figure --------------------------------------------------------------//
-	QVtkFigure* Figure;
-	quint64  FigureHandle;
-	TaskHandler::CreateQVtkFigure(&Figure, &FigureHandle);
-	//---------------------- Write Result ----------------------------------------//
+    
+    auto FigureHandle = TaskHandler::CreateQVtkFigure();
+
+    //---------------------- Write Result ----------------------------------------//
 	std::vector<NameValuePair> PairList;
 
 	NameValuePair Pair;
@@ -1353,7 +1347,7 @@ bool TaskHandler::run_vtkshowpolymesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	qDebug() << "Read Mesh Data is loaded";
+	qDebug() << "Mesh Data is loaded";
 
 	// set name and color carried in FieldData of MeshData----------------------------
 	std::string tempNameStr = PropName.toStdString();
@@ -1587,7 +1581,7 @@ bool TaskHandler::run_vtkshowtrianglemesh(const TaskInformation& TaskInfo)
 		return false;
 	}
 
-	qDebug() << "Read Mesh Data is loaded";
+	qDebug() << "Mesh Data is loaded";
 
 	// set name and color carried in FieldData of MeshData----------------------------
 	std::string tempNameStr = PropName.toStdString();
@@ -2211,7 +2205,7 @@ bool TaskHandler::run_vtkremoveprop(const TaskInformation& TaskInfo)
 
 
 
-bool TaskHandler::RunTask(TaskInformation& TaskInfo)
+bool TaskHandler::RunTask(TaskInformation TaskInfo)
 {	
 	QFile TaskFile(TaskInfo.GetFilePathAndName());
 
@@ -2339,7 +2333,7 @@ void TaskHandler::ReadExampleTaskFile(const TaskInformation& TaskInfo)
 bool TaskHandler::ReadPointData(QString FilePathAndName, int PointNum, QString DataType, vtkPolyData*& PointData)
 {
 	//---------------------------------------------------------------------------------------//
-	// defalut value
+	// default value
 	PointData = nullptr;
 	//---------------------------------------------------------------------------------------//
 
@@ -3123,7 +3117,7 @@ bool TaskHandler::ReadImageData(QString FilePathAndName, const int ImageSize[3],
 
 	qDebug() << "image data memory size: " << tempImage->GetActualMemorySize() * 1024L;
 
-	qDebug() << "voxel components:" << tempImage->GetNumberOfScalarComponents();
+	qDebug() << "number of voxel components:" << tempImage->GetNumberOfScalarComponents();
 
 	qDebug() << "scalar size:" << tempImage->GetScalarSize();
 

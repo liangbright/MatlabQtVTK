@@ -197,8 +197,12 @@ bool LocalTaskServer::InitializeTaskFolders()
 	QDir DiskDir("M:");
 	if (DiskDir.exists() == false)
 	{
-        std::cout << '\a';
-		qWarning("~~~~~~~~~~~~~~~~~ Disk M:/ is not there ~~~~~~~~~~~~~~~~~~~~~~");
+        std::cout << '\a' << '\a' << '\a';
+		qWarning("!!!!!!~~~~~~~~~~~~~~~~~ Disk M:/ does not exist ! ~~~~~~~~~~~~~~~~~~~~~~!!!!!!");
+        std::cout << '\n';
+        qWarning("Pleaase Create a Virtual Disk From Memory, and Name it as M");
+        std::cout << '\n';
+        qWarning("!!!!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!!!!");
 		return false;
 	}
 
@@ -228,7 +232,8 @@ bool LocalTaskServer::InitializeTaskFolders()
 
 
 bool LocalTaskServer::HasPendingTasks()
-{// check M:/PendingTasks if it is empty
+{
+    // check M:/PendingTasks if it is empty
 	if (QDir("M:/PendingTasks").entryList(QDir::NoDotAndDotDot | QDir::AllEntries).count() == 0)
 	{
 		return false;
