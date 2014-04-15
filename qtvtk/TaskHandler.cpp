@@ -30,9 +30,9 @@ TaskHandler::TaskHandler()
 {
 	this->CreateMatlabCommandTranslator();
 
-	this->CreateRBGColorTable();
+	this->CreateCommonRBGColorTable();
 
-	m_time.start();
+	//m_time.start();
 
 	m_FigureCounter = 0;
 }
@@ -3229,7 +3229,7 @@ quint64 TaskHandler::GenerateFigureHandle()
 	*/
 }
 
-void TaskHandler::CreateRBGColorTable()
+void TaskHandler::CreateCommonRBGColorTable()
 {
 	RGBColor Color;
 
@@ -3237,91 +3237,92 @@ void TaskHandler::CreateRBGColorTable()
 	Color.Value[0] = 1;
 	Color.Value[1] = 1;
 	Color.Value[2] = 1;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "black";
 	Color.Value[0] = 0;
 	Color.Value[1] = 0;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "red";
 	Color.Value[0] = 1;
 	Color.Value[1] = 0;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "green";
 	Color.Value[0] = 0;
 	Color.Value[1] = 1;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "blue";
 	Color.Value[0] = 0;
 	Color.Value[1] = 0;
 	Color.Value[2] = 1;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "yellow";
 	Color.Value[0] = 1;
 	Color.Value[1] = 1;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "cyan";
 	Color.Value[0] = 0;
 	Color.Value[1] = 1;
 	Color.Value[2] = 1;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "magenta";
 	Color.Value[0] = 1;
 	Color.Value[1] = 0;
 	Color.Value[2] = 1;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "silver";
 	Color.Value[0] = 192 / 255.0;
 	Color.Value[1] = 192 / 255.0;
 	Color.Value[2] = 192 / 255.0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "orange";
 	Color.Value[0] = 1;
 	Color.Value[1] = 165 / 255.0;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "gold";
 	Color.Value[0] = 1;
 	Color.Value[1] = 215 / 255.0;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "darkred";
 	Color.Value[0] = 139 / 255.0;
 	Color.Value[1] = 0;
 	Color.Value[2] = 0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "purple";
 	Color.Value[0] = 128 / 255.0;
 	Color.Value[1] = 0;
 	Color.Value[2] = 128 / 255.0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 
 	Color.Name = "wheat";
 	Color.Value[0] = 245 / 255.0;
 	Color.Value[1] = 222 / 255.0;
 	Color.Value[2] = 179 / 255.0;
-	m_RBGColorTable[Color.Name] = Color;
+	m_CommonRBGColorTable[Color.Name] = Color;
 }
+
 
 bool TaskHandler::GetRBGColorByName(QString ColorName, double Value[3])
 {
-	auto it = m_RBGColorTable.find(ColorName);
-	if (it != m_RBGColorTable.end())
+	auto it = m_CommonRBGColorTable.find(ColorName);
+	if (it != m_CommonRBGColorTable.end())
 	{
 		auto Color = it.value();
 		Value[0] = Color.Value[0];

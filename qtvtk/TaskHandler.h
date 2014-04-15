@@ -134,11 +134,11 @@ private:
 	// <FigureHandle, UniquePtr_Figure>
 	std::unordered_map<quint64, std::unique_ptr<QVtkFigure>> m_FigureRecord; 
 
-	QTime m_time;
+	//QTime m_time;
 
 	quint64 m_FigureCounter;
 
-	QMap<QString, RGBColor> m_RBGColorTable;
+    QMap<QString, RGBColor> m_CommonRBGColorTable;
 
 public:
 	TaskHandler();
@@ -160,7 +160,8 @@ private:
 
 	QVtkFigure* GetQVtkFigure(quint64 FigureHandle);
 
-	void CreateRBGColorTable();
+    void CreateCommonRBGColorTable();
+
 	bool GetRBGColorByName(QString ColorName, double* Value);
 
 	//------------- Read Data From File ---------------------------------------------//

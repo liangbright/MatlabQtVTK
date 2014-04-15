@@ -111,50 +111,7 @@ void QVtkFigure::Show()
 
 void QVtkFigure::Save()
 {
-	/*
-	qDebug("saveing window.");
-
-	QString docDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).append("/");
-
-	const QString caption = "Save window as image";
-	const QString dir = docDir.append(QString("SceneWindow_%1.png").arg(SceneRegistry::instance()->handleFor(this)));
-
-	const QString ImageFormat = tr("PNG Image (*.png) ;; JPEG Image (*.jpg)");
-	QString SelectedImageFormat = "PNG Image (*.png)";
-
-	//Options option = 0;
-	QString saveFile = QFileDialog::getSaveFileName(centralWidget, caption, dir, filter, &selectedFilter);
-	qDebug() << "saving to:" << saveFile << " as: " << selectedFilter;
-
-	// no file was selected, user clicked "cancel": return without doing anything
-	if (saveFile.length() == 0) {
-	Debug("cancel @ QVtkFigure::Save()");
-	return;
-	}
-
-	vtkSmartPointer<vtkWindowToImageFilter> imageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
-	imageFilter->SetInput(this->vtkWidget->GetRenderWindow());
-
-	vtkSmartPointer<vtkImageWriter> imageWriter;
-	if (selectedFilter == "PNG Image (*.png)")
-	{
-	imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
-	}
-	else if (selectedFilter == "JPEG Image (*.jpg)")
-	{
-	imageWriter = vtkSmartPointer<vtkJPEGWriter>::New();
-	}
-	else
-	{
-	//Default to PNG writer
-	imageWriter = vtkSmartPointer<vtkPNGWriter>::New();
-	}
-
-	imageWriter->SetInputData(imageFilter->GetOutput());
-
-	imageWriter->SetFileName(saveFile.toStdString().c_str());
-	imageWriter->Write();
-	*/
+	
 }
 
 void QVtkFigure::Close()
@@ -765,7 +722,7 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 
 	if (GpuRcMapper->IsRenderSupported(this->GetRenderWindow(), VolumeProperty))
 	{
-		qDebug("GPU OpenGL RayCasting enabled!");
+		qDebug("GPU RayCasting is selected");
 		VolumeMapper = GpuRcMapper;
 	}
 	// no fast GPU raycasting available.
@@ -773,7 +730,7 @@ vtkProp* QVtkFigure::CreateVolumeProp(vtkImageData* VolumeData, vtkVolumePropert
 	{
 		GpuRcMapper->Delete();
 
-		qDebug("SLOW software ray casting.");
+		qDebug("software RayCasting is selected");
 		//vtkVolumeRayCastCompositeFunction *compositeFunction = vtkVolumeRayCastCompositeFunction::New();
 
 		auto *RcMapper = vtkFixedPointVolumeRayCastMapper::New();
@@ -848,7 +805,7 @@ vtkVolumeProperty* QVtkFigure::CreateDefaultVolumeProperty_Color(const double Da
 
 	auto OpacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
 
-	qDebug("default color LUT for range: %.2f - %.2f", DataRange[0], DataRange[1]);
+	qDebug("DataRange: %.2f - %.2f", DataRange[0], DataRange[1]);
 	//colorTransferFunction->HSVWrapOff();
 	//colorTransferFunction->SetColorSpaceToHSV();
 

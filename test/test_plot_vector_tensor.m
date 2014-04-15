@@ -11,7 +11,7 @@ Point=[0 1 2 3 4 5 6 7 8 9
 Color=[1, 0, 0];
 
 tic
-Result1 = vtkplotpoint(FigureHandle, Point, Color);
+Result1 = vtkplotpoint(FigureHandle, 'Point', Point, Color);
 toc
 %%
 Vector=[0 1 2 3 4 5 6 7 8 9 10 11 12
@@ -28,7 +28,7 @@ VectorData=[Vector
 Color=[1, 1, 0];
 
 tic
-Result2 = vtkplotvector(FigureHandle, VectorData, Color);
+Result2 = vtkplotvector(FigureHandle, 'Vector', VectorData, Color);
 toc
 %%
 Tensor=[0 1 2
@@ -41,6 +41,6 @@ Position=[-1
 
 TensorData(:,1)=[Tensor(:); Position(:,1)];
 
-Color=[1, 1, 0];
+Color=[1, 0, 0];
 
-Result2 = vtkplottensor(FigureHandle, TensorData, Color);
+Result2 = vtkplottensor(FigureHandle, 'Tensor', TensorData, Color);
